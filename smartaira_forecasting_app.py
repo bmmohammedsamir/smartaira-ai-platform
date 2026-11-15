@@ -490,11 +490,16 @@ def run_auto_horizon_forecast(
 
     # 3. Compute SHAP explanations on future forecast rows
     estimator = automl.model.estimator
-    explainer = shap.TreeExplainer(estimator)
-    shap_vals = explainer.shap_values(X_fut_raw)
-    if isinstance(shap_vals, list):
-        shap_vals = shap_vals[0]
-    shap_vals = np.asarray(shap_vals)
+    try:
+        explainer = shap.TreeExplainer(estimator)
+        shap_vals = explainer.shap_values(X_fut_raw)
+        if isinstance(shap_vals, list):
+            shap_vals = shap_vals[0]
+        shap_vals = np.asarray(shap_vals)
+    except Exception:
+        # SHAP can fail with some LightGBM/SHAP combinations when categorical
+        # columns are present. Forecasting remains usable without explanations.
+        shap_vals = np.zeros((len(X_fut_raw), X_fut_raw.shape[1]), dtype=float)
 
     friendly_names = {
         "cal_is_weekend_fri_sat": "Weekend (Fri/Sat)",
