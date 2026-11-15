@@ -240,6 +240,17 @@ BRAND_CSS = """
 </style>
 """
 
+NO_CACHE_META = """
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, document.title, window.location.pathname + '?v=' + Date.now());
+  }
+</script>
+"""
+
 
 def get_secret(key: str, default: str) -> str:
     try:
@@ -875,6 +886,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+    st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
 
     default_state = {
