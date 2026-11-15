@@ -22,8 +22,7 @@ BRAND_CSS = """
         direction: rtl;
     }
     [data-testid="stSidebar"] {
-        direction: rtl;
-        text-align: right;
+        display: none;
     }
     [data-testid="stAppViewContainer"] {
         direction: rtl;
@@ -937,134 +936,79 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    # Sidebar: Login Gate, Data Source & Forecast Controls
-    with st.sidebar:
-        st.markdown("### 🚀 منصة سمارتيرا")
-        st.caption("أداة بسيطة لمساعدة أصحاب الأعمال على التخطيط للمبيعات")
-        st.divider()
+    # Main-page workflow controls: no sidebar required.
+    st.markdown("### ١. اختر بيانات المبيعات")
+    data_mode = st.radio(
+        "مصدر البيانات",
+        ["تجربة ببيانات جاهزة", "رفع ملف المبيعات"],
+        horizontal=True,
+    )
 
-        expected_user = get_secret("DEMO_USERNAME", "smartaira").strip()
-        expected_password = get_secret("DEMO_PASSWORD", "smartaira").strip()
-
-        if not st.session_state["authenticated"]:
-            st.subheader("🔐 الدخول إلى مساحة العمل")
-            with st.form("login_form"):
-                username_input = st.text_input("اسم المستخدم", value="smartaira")
-                password_input = st.text_input("كلمة المرور", value="smartaira", type="password")
-                submitted = st.form_submit_button("دخول", type="primary", width="stretch")
-
-                if submitted:
-                    configured_credentials_valid = (
-                        username_input.strip().lower() == expected_user.lower()
-                        and password_input.strip() == expected_password
-                    )
-                    demo_credentials_valid = (
-                        username_input.strip().lower() == "smartaira"
-                        and password_input.strip().lower() == "smartaira"
-                    )
-                    if configured_credentials_valid or demo_credentials_valid:
-                        st.session_state["authenticated"] = True
-                        st.session_state["current_user"] = username_input.strip()
-                        st.rerun()
-                    else:
-                        st.error("اسم المستخدم أو كلمة المرور غير صحيحة. استخدم بيانات الدخول التجريبية بالأسفل.")
-
-            st.markdown(
-                """
-                <div class="hint-box">
-                    💡 <b>بيانات الدخول التجريبية:</b><br>
-                    اسم المستخدم: <code>smartaira</code><br>
-                    كلمة المرور: <code>smartaira</code>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.divider()
-            st.markdown(
-                """
-                <div class="privacy-box">
-                    🔒 <b>بيئة عرض آمنة (Stateless Demo)</b><br>
-                    تعمل هذه النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين أي ملفات على الخادم بعد إغلاق الجلسة.
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.stop()
-
-        st.caption(f"تم الدخول باسم **{st.session_state['current_user']}**")
-        st.subheader("١. مصدر البيانات")
-        data_mode = st.radio(
-            "اختر مصدر البيانات",
-            ["تجربة ببيانات جاهزة", "رفع ملف المبيعات"],
-            label_visibility="collapsed",
-        )
-
-        if data_mode == "تجربة ببيانات جاهزة":
-            if st.button("استخدام بيانات تجريبية جاهزة (720 صفاً)", width="stretch"):
-                st.session_state["raw_df"] = generate_sample_retail_csv()
-                st.session_state["source_name"] = "smartaira_sample_retail_sales.csv"
+    if data_mode == "تجربة ببيانات جاهزة":
+        if st.button("استخدام بيانات تجريبية جاهزة (720 صفاً)", width="stretch"):
+            st.session_state["raw_df"] = generate_sample_retail_csv()
+            st.session_state["source_name"] = "smartaira_sample_retail_sales.csv"
+            st.session_state["forecast_result"] = None
+            st.session_state["approval_status"] = "PENDING"
+            st.session_state["approved_at"] = None
+    else:
+        uploaded = st.file_uploader("ارفع ملف CSV بصيغة UTF-8 (حتى 5 ميجابايت)", type=["csv"])
+        if uploaded is not None:
+            try:
+                raw_bytes = uploaded.getvalue()
+                df_up = pd.read_csv(io.BytesIO(raw_bytes), encoding="utf-8-sig")
+                st.session_state["raw_df"] = df_up
+                st.session_state["source_name"] = uploaded.name
                 st.session_state["forecast_result"] = None
                 st.session_state["approval_status"] = "PENDING"
                 st.session_state["approved_at"] = None
-        else:
-            uploaded = st.file_uploader("ارفع ملف CSV بصيغة UTF-8 (حتى 5 ميجابايت)", type=["csv"])
-            if uploaded is not None:
-                try:
-                    raw_bytes = uploaded.getvalue()
-                    df_up = pd.read_csv(io.BytesIO(raw_bytes), encoding="utf-8-sig")
-                    st.session_state["raw_df"] = df_up
-                    st.session_state["source_name"] = uploaded.name
-                    st.session_state["forecast_result"] = None
-                    st.session_state["approval_status"] = "PENDING"
-                    st.session_state["approved_at"] = None
-                except Exception as exc:
-                    st.error(f"تعذر قراءة ملف CSV: {exc}")
+            except Exception as exc:
+                st.error(f"تعذر قراءة ملف CSV: {exc}")
 
-        df_loaded: Optional[pd.DataFrame] = st.session_state["raw_df"]
-        date_col = target_col = None
-        group_col: Optional[str] = None
-        horizon = 30
+    df_loaded: Optional[pd.DataFrame] = st.session_state["raw_df"]
+    date_col = target_col = None
+    group_col: Optional[str] = None
+    horizon = 30
 
-        if df_loaded is not None:
-            st.divider()
-            st.subheader("٢. إعداد فترة التوقع")
-            cols = df_loaded.columns.tolist()
-
-            default_date_idx = next((i for i, c in enumerate(cols) if "date" in c.lower()), 0)
-            default_target_idx = next(
-                (i for i, c in enumerate(cols) if any(k in c.lower() for k in ("sales", "revenue", "amount", "qty"))),
-                len(cols) - 1,
-            )
-            default_group_choices = ["بدون تقسيم (إجمالي الشركة)"] + cols
-            default_group_idx = next(
-                (i for i, c in enumerate(default_group_choices) if any(k in c.lower() for k in ("branch", "sku", "store", "region"))),
-                0,
-            )
-
-            date_col = st.selectbox("عمود التاريخ", options=cols, index=default_date_idx)
-            target_col = st.selectbox("عمود المبيعات أو القيمة", options=cols, index=default_target_idx)
-            group_choice = st.selectbox("التقسيم حسب فرع أو صنف (اختياري)", options=default_group_choices, index=default_group_idx)
-            group_col = None if group_choice == "بدون تقسيم (إجمالي الشركة)" else group_choice
-            horizon = st.selectbox("عدد الفترات القادمة", options=[7, 14, 30, 60], index=2, format_func=lambda x: f"{x} يوم")
-
-            run_clicked = st.button("ابدأ توقع المبيعات", type="primary", width="stretch")
-        else:
-            run_clicked = False
-
+    if df_loaded is not None:
         st.divider()
-        st.markdown(
-            """
-            <div class="privacy-box">
-                🔒 <b>بيئة عرض آمنة (Stateless Demo)</b><br>
-                تعمل هذه النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين أي ملفات على الخادم بعد إغلاق الجلسة.
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.subheader("٢. اختر طريقة التوقع")
+        cols = df_loaded.columns.tolist()
+
+        default_date_idx = next((i for i, c in enumerate(cols) if "date" in c.lower()), 0)
+        default_target_idx = next(
+            (i for i, c in enumerate(cols) if any(k in c.lower() for k in ("sales", "revenue", "amount", "qty"))),
+            len(cols) - 1,
         )
-        if st.button("مسح البيانات وتسجيل الخروج", width="stretch"):
-            for k, v in default_state.items():
-                st.session_state[k] = v
-            st.rerun()
+        default_group_choices = ["بدون تقسيم (إجمالي الشركة)"] + cols
+        default_group_idx = next(
+            (i for i, c in enumerate(default_group_choices) if any(k in c.lower() for k in ("branch", "sku", "store", "region"))),
+            0,
+        )
+
+        date_col = st.selectbox("عمود التاريخ", options=cols, index=default_date_idx)
+        target_col = st.selectbox("عمود المبيعات أو القيمة", options=cols, index=default_target_idx)
+        group_choice = st.selectbox("التقسيم حسب فرع أو صنف (اختياري)", options=default_group_choices, index=default_group_idx)
+        group_col = None if group_choice == "بدون تقسيم (إجمالي الشركة)" else group_choice
+        horizon = st.selectbox("عدد الفترات القادمة", options=[7, 14, 30, 60], index=2, format_func=lambda x: f"{x} يوم")
+
+        run_clicked = st.button("ابدأ توقع المبيعات", type="primary", width="stretch")
+    else:
+        run_clicked = False
+
+    st.markdown(
+        """
+        <div class="privacy-box">
+            🔒 <b>بيئة عرض آمنة</b><br>
+            تعمل النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين ملفاتك بعد إغلاق الجلسة.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("مسح البيانات وتسجيل الخروج", width="stretch"):
+        for k, v in default_state.items():
+            st.session_state[k] = v
+        st.rerun()
 
     # Main Canvas: Status Strip & Validation
     if df_loaded is None:
@@ -1077,7 +1021,7 @@ def main() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.info("👈 اختر **استخدام بيانات تجريبية جاهزة** أو ارفع **ملف المبيعات** من القائمة الجانبية للبدء.")
+        st.info("👈 اختر **استخدام بيانات تجريبية جاهزة** أو ارفع **ملف المبيعات** من هذه الصفحة للبدء.")
         st.markdown(
             '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
             unsafe_allow_html=True,
