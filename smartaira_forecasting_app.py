@@ -27,6 +27,47 @@ BRAND_CSS = """
     [data-testid="stAppViewContainer"] {
         direction: rtl;
     }
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"],
+    [data-testid="stExpander"],
+    [data-testid="stAlert"],
+    [data-testid="stMetric"],
+    [data-testid="stFileUploader"],
+    [data-testid="stTextInput"],
+    [data-testid="stSelectbox"],
+    [data-testid="stRadio"],
+    [data-testid="stButton"],
+    [data-testid="stDownloadButton"],
+    [data-testid="stDataFrame"],
+    .stMarkdown,
+    .stCaption,
+    .stText,
+    .stAlert {
+        direction: rtl;
+        text-align: right;
+    }
+    input,
+    textarea,
+    select,
+    [role="combobox"],
+    [role="radiogroup"],
+    [role="listbox"] {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    button {
+        direction: rtl;
+    }
+    [data-testid="stMetricValue"],
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricDelta"] {
+        direction: rtl;
+        text-align: right;
+    }
+    [data-testid="stDataFrame"] iframe {
+        direction: rtl;
+    }
     @media (max-width: 640px) {
         .smartaira-hero {
             padding: 1.15rem 1rem;
