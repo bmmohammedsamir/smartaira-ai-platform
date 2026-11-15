@@ -90,6 +90,21 @@ BRAND_CSS = """
             padding: 1.15rem;
             margin: 0.5rem 0 1rem;
         }
+        .workflow-steps {
+            gap: 0.2rem;
+            padding: 0.45rem;
+        }
+        .workflow-step {
+            font-size: 0.68rem;
+        }
+        .workflow-line {
+            flex-basis: 7px;
+        }
+        .js-plotly-plot,
+        .stPlotlyChart {
+            max-height: 380px;
+            overflow: hidden;
+        }
     }
     .login-card {
         background: #FFFFFF;
@@ -102,6 +117,35 @@ BRAND_CSS = """
         box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
         direction: rtl;
         text-align: right;
+    }
+    .workflow-steps {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin: 0.85rem 0 1rem;
+        padding: 0.65rem 0.8rem;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        direction: rtl;
+    }
+    .workflow-step {
+        flex: 1;
+        padding: 0.45rem 0.25rem;
+        color: #64748B;
+        text-align: center;
+        font-size: 0.78rem;
+        border-radius: 7px;
+    }
+    .workflow-step.active {
+        color: #065F46;
+        background: #ECFDF5;
+        font-weight: 700;
+    }
+    .workflow-line {
+        flex: 0 0 18px;
+        height: 1px;
+        background: #CBD5E1;
     }
     .smartaira-hero {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
@@ -820,7 +864,7 @@ def build_3d_forecast_figure(res: dict) -> go.Figure:
     )
 
     fig.update_layout(
-        height=540,
+        height=420,
         margin={"l": 0, "r": 0, "t": 25, "b": 0},
         paper_bgcolor="#FFFFFF",
         scene={
@@ -951,44 +995,6 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            """
-            <div class="value-card">
-                <div class="value-card-title">📊 افهم سبب تغيّر مبيعاتك</div>
-                <p class="value-card-body">
-                    نكشف لك أهم 3 عوامل تحرك مبيعاتك (العروض، الأسعار، عطلة نهاية الأسبوع، والمواسم) لكل فرع وصنف.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            """
-            <div class="value-card gold">
-                <div class="value-card-title">⚡ جاهز خلال دقيقة واحدة</div>
-                <p class="value-card-body">
-                    لا تحتاج إلى أي إعدادات تقنية. ارفع ملف مبيعات واحداً لنجهز لك خطة الثلاثين يوماً القادمة.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c3:
-        st.markdown(
-            """
-            <div class="value-card navy">
-                <div class="value-card-title">🛡️ خصوصية وحوكمة كاملة</div>
-                <p class="value-card-body">
-                    بيئة عمل آمنة تتيح للمدير مراجعة التوقعات واعتمادها بضغطة زر وتصدير النتائج إلى ملف إكسل.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
     # Main-page workflow controls: no sidebar required.
     st.markdown("### ١. اختر بيانات المبيعات")
     data_mode = st.radio(
@@ -1063,6 +1069,15 @@ def main() -> None:
             st.session_state[k] = v
         st.rerun()
 
+    active_step = 3 if st.session_state["forecast_result"] is not None else (2 if df_loaded is not None else 1)
+    step_labels = ["١. ملف المبيعات", "٢. إعداد التوقع", "٣. النتيجة"]
+    step_markup = "".join(
+        f'<div class="workflow-step {"active" if i + 1 == active_step else ""}">{label}</div>'
+        + ('<span class="workflow-line"></span>' if i < 2 else '')
+        for i, label in enumerate(step_labels)
+    )
+    st.markdown(f'<div class="workflow-steps">{step_markup}</div>', unsafe_allow_html=True)
+
     # Main Canvas: Status Strip & Validation
     if df_loaded is None:
         st.markdown(
@@ -1129,9 +1144,9 @@ def main() -> None:
 
     res = st.session_state["forecast_result"]
     if res is None:
-        st.info("👈 راجع اختيار الأعمدة من القائمة الجانبية ثم اضغط **ابدأ توقع المبيعات**.")
+        st.info("👈 راجع اختيار الأعمدة بالأعلى ثم اضغط **ابدأ توقع المبيعات**.")
         st.markdown(
-            '<div class="brand-footer">Smartaira AI Platform &nbsp;•&nbsp; Explainable Commercial Intelligence &nbsp;•&nbsp; © 2026</div>',
+            '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; توقعات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
             unsafe_allow_html=True,
         )
         st.stop()
