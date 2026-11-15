@@ -69,21 +69,6 @@ BRAND_CSS = """
         direction: rtl;
         text-align: right;
     }
-    .build-header {
-        direction: rtl;
-        text-align: right;
-        color: #64748B;
-        font-size: 0.78rem;
-        margin: 0 0 0.65rem;
-    }
-    .build-header code {
-        color: #065F46;
-        background: #ECFDF5;
-        border: 1px solid #A7F3D0;
-        border-radius: 6px;
-        padding: 0.1rem 0.35rem;
-        font-weight: 700;
-    }
     input,
     textarea,
     select,
@@ -1097,11 +1082,7 @@ def main() -> None:
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
     build_id = get_build_id()
-    st.markdown(f"### 🔖 إصدار التطبيق الحالي: `{build_id}`")
-    st.markdown(
-        f'<div class="build-header">نسخة التطبيق الحالية: <code>{build_id}</code></div>',
-        unsafe_allow_html=True,
-    )
+    st.caption(f"نسخة التطبيق: {build_id}")
 
     default_state = {
         "authenticated": False,
