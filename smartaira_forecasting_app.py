@@ -2,7 +2,6 @@ from datetime import datetime
 import io
 import os
 import re
-import subprocess
 from typing import Optional
 
 import altair as alt
@@ -14,25 +13,6 @@ import shap
 from sklearn.metrics import mean_absolute_percentage_error
 import streamlit as st
 
-
-BUILD_ID_FALLBACK = "4ee74cf"
-
-
-def get_build_id() -> str:
-    """Return the deployed commit when the hosting environment exposes it."""
-    for env_name in ("STREAMLIT_COMMIT_ID", "GIT_COMMIT", "COMMIT_SHA"):
-        value = os.getenv(env_name, "").strip()
-        if value:
-            return value[:12]
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=2,
-        ).strip() or BUILD_ID_FALLBACK
-    except (OSError, subprocess.SubprocessError):
-        return BUILD_ID_FALLBACK
 
 # -----------------------------------------------------------------------------
 # Brand CSS Styling (Nile Executive Navy, Smartaira Emerald, Cairo Gold)
@@ -1109,7 +1089,6 @@ def main() -> None:
     )
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
-    build_id = get_build_id()
 
     default_state = {
         "authenticated": False,
@@ -1809,7 +1788,7 @@ def main() -> None:
         )
 
     st.markdown(
-        f'<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026 &nbsp;•&nbsp; نسخة {build_id}</div>',
+        '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
         unsafe_allow_html=True,
     )
 
