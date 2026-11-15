@@ -486,16 +486,31 @@ BRAND_CSS = """
 </style>
 """
 
-NO_CACHE_META = """
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<script>
-  if (window.history && window.history.replaceState) {
-    window.history.replaceState(null, document.title, window.location.pathname + '?v=' + Date.now());
-  }
-</script>
-"""
+def get_no_cache_meta(build_id: str) -> str:
+    """Version the browser URL and clear stale browser caches on a new deployment."""
+    return f"""
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+      (() => {{
+        const buildId = "{build_id}";
+        const storageKey = "smartaira-active-build";
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.get("build") !== buildId) {{
+          currentUrl.searchParams.set("build", buildId);
+          window.location.replace(currentUrl.toString());
+          return;
+        }}
+        if (window.localStorage.getItem(storageKey) !== buildId) {{
+          window.localStorage.setItem(storageKey, buildId);
+          if ("caches" in window) {{
+            window.caches.keys().then((keys) => Promise.all(keys.map((key) => window.caches.delete(key))));
+          }}
+        }}
+      }})();
+    </script>
+    """
 
 
 def get_secret(key: str, default: str) -> str:
@@ -1267,7 +1282,13 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    st.markdown(NO_CACHE_META, unsafe_allow_html=True)
+    build_id = get_build_id()
+    if st.session_state.get("_active_build_id") != build_id:
+        st.cache_data.clear()
+        st.session_state["_active_build_id"] = build_id
+    if st.query_params.get("build") != build_id:
+        st.query_params["build"] = build_id
+    st.markdown(get_no_cache_meta(build_id), unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
     design_style = st.selectbox(
         "نمط الواجهة",
@@ -1276,8 +1297,6 @@ def main() -> None:
         help="يمكنك تغيير شكل الواجهة في أي وقت دون التأثير على البيانات أو التوقعات.",
     )
     st.markdown(get_design_css(design_style), unsafe_allow_html=True)
-    build_id = get_build_id()
-
     default_state = {
         "authenticated": False,
         "current_user": None,
