@@ -40,6 +40,68 @@ def render_build_id(build_id: str) -> None:
     st.caption(f"نسخة التطبيق: {build_id}")
 
 
+DESIGN_OPTIONS = (
+    "Neumorphism ناعم",
+    "تنفيذي كلاسيكي",
+    "ورقي دافئ",
+)
+
+
+def get_design_css(design_style: str) -> str:
+    """Return lightweight CSS overrides for the user's preferred visual treatment."""
+    if design_style == "تنفيذي كلاسيكي":
+        return """
+        <style>
+            .stApp { background: #F8FAFC; }
+            [data-testid="stMetric"], [data-testid="stExpander"], [data-testid="stFileUploader"] section, [data-testid="stDataFrame"] {
+                background: #FFFFFF; border: 1px solid #D9E2EC; border-radius: 12px;
+                box-shadow: 0 3px 10px rgba(15, 23, 42, 0.07);
+            }
+            [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea, [data-testid="stNumberInput"] input,
+            [data-testid="stSelectbox"] [data-baseweb="select"] > div, [data-testid="stFileUploader"] section {
+                background: #FFFFFF !important; box-shadow: none !important; border-color: #CBD5E1 !important;
+            }
+            [data-testid="stButton"] > button, [data-testid="stDownloadButton"] > button, [data-testid="stFormSubmitButton"] > button {
+                background: #FFFFFF; border-radius: 10px; box-shadow: none;
+            }
+            [data-testid="stButton"] > button:active, [data-testid="stDownloadButton"] > button:active, [data-testid="stFormSubmitButton"] > button:active {
+                transform: none; box-shadow: inset 0 1px 3px rgba(15,23,42,0.14);
+            }
+            [data-testid="stButton"] > button[kind="primary"], [data-testid="stDownloadButton"] > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+                background: #059669; box-shadow: none;
+            }
+            [data-baseweb="tab"] { background: #FFFFFF; box-shadow: none; border-radius: 9px 9px 0 0; }
+            [data-baseweb="tab"][aria-selected="true"] { background: #ECFDF5; box-shadow: inset 0 -3px 0 #10B981; }
+        </style>
+        """
+    if design_style == "ورقي دافئ":
+        return """
+        <style>
+            .stApp { background: #F4EFE6; }
+            [data-testid="stMetric"], [data-testid="stExpander"], [data-testid="stFileUploader"] section, [data-testid="stDataFrame"] {
+                background: #F4EFE6; border-color: rgba(255,255,255,0.72);
+                box-shadow: 8px 8px 16px #D8CFC0, -8px -8px 16px #FFFDF8;
+            }
+            [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea, [data-testid="stNumberInput"] input,
+            [data-testid="stSelectbox"] [data-baseweb="select"] > div, [data-testid="stFileUploader"] section {
+                background: #F4EFE6 !important; border-color: #E3D9C8 !important;
+                box-shadow: inset 4px 4px 8px #D9D0C1, inset -4px -4px 8px #FFFDF8 !important;
+            }
+            [data-testid="stButton"] > button, [data-testid="stDownloadButton"] > button, [data-testid="stFormSubmitButton"] > button {
+                background: #F4EFE6; box-shadow: 6px 6px 12px #D7CEBF, -6px -6px 12px #FFFDF8;
+            }
+            [data-testid="stButton"] > button[kind="primary"], [data-testid="stDownloadButton"] > button[kind="primary"], [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+                background: linear-gradient(145deg, #B7791F, #8B5E18); box-shadow: 6px 6px 12px rgba(112,75,20,0.3), -3px -3px 9px #FFFDF8;
+            }
+            .smartaira-hero { border-right-color: #C28A2E; }
+            .smartaira-tagline-ar { color: #F6C76C; }
+            [data-baseweb="tab"] { background: #F4EFE6; box-shadow: 4px 4px 9px #D8CFC0, -4px -4px 9px #FFFDF8; }
+            [data-baseweb="tab"][aria-selected="true"] { background: #F5E6C9; color: #744B13; }
+        </style>
+        """
+    return ""
+
+
 # -----------------------------------------------------------------------------
 # Brand CSS Styling (Nile Executive Navy, Smartaira Emerald, Cairo Gold)
 # -----------------------------------------------------------------------------
@@ -1207,6 +1269,13 @@ def main() -> None:
     )
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
+    design_style = st.selectbox(
+        "نمط الواجهة",
+        options=DESIGN_OPTIONS,
+        index=0,
+        help="يمكنك تغيير شكل الواجهة في أي وقت دون التأثير على البيانات أو التوقعات.",
+    )
+    st.markdown(get_design_css(design_style), unsafe_allow_html=True)
     build_id = get_build_id()
 
     default_state = {
