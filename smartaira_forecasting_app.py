@@ -399,6 +399,51 @@ def detect_granularity(unique_dates: pd.DatetimeIndex) -> tuple[str, pd.DateOffs
     return "يومي", pd.DateOffset(days=1)
 
 
+def aggregate_and_complete_sales(
+    work: pd.DataFrame, date_col: str, target_col: str, group_col: Optional[str]
+) -> pd.DataFrame:
+    """Aggregate transactions and add missing calendar periods for forecasting."""
+    key_cols = ["_parsed_date"] + ([group_col] if group_col else [])
+    aggregations = {}
+    for col in work.columns:
+        if col in key_cols:
+            continue
+        if col == target_col:
+            aggregations[col] = "sum"
+        elif pd.api.types.is_numeric_dtype(work[col]):
+            aggregations[col] = "mean"
+        else:
+            aggregations[col] = "first"
+
+    aggregated = work.groupby(key_cols, as_index=False, dropna=False).agg(aggregations)
+    if group_col:
+        grouped_items = list(aggregated.groupby(group_col, dropna=False, sort=False))
+    else:
+        grouped_items = [(None, aggregated)]
+
+    completed_frames = []
+    for group_value, series in grouped_items:
+        start_date = series["_parsed_date"].min()
+        end_date = series["_parsed_date"].max()
+        full_dates = pd.date_range(start=start_date, end=end_date, freq="D")
+        grid = pd.DataFrame({"_parsed_date": full_dates})
+        if group_col:
+            grid[group_col] = group_value
+        merged = grid.merge(series, on=key_cols, how="left", suffixes=("", "_source"))
+        merged[target_col] = merged[target_col].fillna(0.0)
+        for col in aggregations:
+            if col == target_col:
+                continue
+            if pd.api.types.is_numeric_dtype(work[col]):
+                merged[col] = merged[col].ffill().bfill().fillna(0.0)
+            else:
+                merged[col] = merged[col].ffill().bfill().fillna("غير محدد")
+        merged[date_col] = merged["_parsed_date"].dt.strftime("%Y-%m-%d")
+        completed_frames.append(merged)
+
+    return pd.concat(completed_frames, ignore_index=True).sort_values(key_cols).reset_index(drop=True)
+
+
 def validate_dataset(
     df: pd.DataFrame, date_col: str, target_col: str, group_col: Optional[str]
 ) -> tuple[bool, str, Optional[pd.DataFrame]]:
@@ -452,6 +497,11 @@ def validate_dataset(
         )
     work[target_col] = numeric_target.astype(float)
 
+    if group_col:
+        work[group_col] = work[group_col].astype(str).str.strip()
+
+    work = aggregate_and_complete_sales(work, date_col, target_col, group_col)
+
     if len(work) < 30:
         return (
             False,
@@ -466,22 +516,7 @@ def validate_dataset(
             None,
         )
 
-    key_cols = ["_parsed_date"] + ([group_col] if group_col else [])
-    dups = work[work.duplicated(subset=key_cols, keep=False)]
-    if not dups.empty:
-        sample_row = dups.iloc[0]
-        key_desc = sample_row["_parsed_date"].strftime("%Y-%m-%d")
-        if group_col:
-            key_desc += f" | {sample_row[group_col]}"
-        return (
-            False,
-            f"تم العثور على صفوف مكررة لنفس التاريخ والمجموعة (مثلاً '{key_desc}'). "
-            "اجمع المعاملات حسب التاريخ قبل رفع الملف.",
-            None,
-        )
-
     if group_col:
-        work[group_col] = work[group_col].astype(str).str.strip()
         counts = work.groupby(group_col).size()
         if counts.max() < 15:
             return (
@@ -524,6 +559,11 @@ def run_auto_horizon_forecast(
     group_col: Optional[str],
     horizon: int,
     approval_status: str,
+    scenario_name: str = "الحالة الأساسية",
+    scenario_multiplier: float = 1.0,
+    planned_promo: bool = False,
+    planned_discount_pct: float = 0.0,
+    planned_price_change_pct: float = 0.0,
 ) -> dict:
     df = validated_df.sort_values("_parsed_date").reset_index(drop=True)
     unique_dates = pd.DatetimeIndex(df["_parsed_date"].unique()).sort_values()
@@ -533,13 +573,16 @@ def run_auto_horizon_forecast(
     recent_start = unique_dates[cutoff_idx]
 
     if group_col:
+        all_groups = df[group_col].dropna().unique().tolist()
         recent_sales = df[df["_parsed_date"] >= recent_start].groupby(group_col)[target_col].sum()
         active_groups = [g for g, val in recent_sales.items() if val > 0]
         if not active_groups:
-            active_groups = df[group_col].unique().tolist()
+            active_groups = all_groups
         df_active = df[df[group_col].isin(active_groups)].copy()
+        excluded_groups = [g for g in all_groups if g not in active_groups]
     else:
         active_groups = [None]
+        excluded_groups = []
         df_active = df.copy()
 
     feature_cols = [c for c in original_cols if c not in (date_col, target_col)]
@@ -561,8 +604,13 @@ def run_auto_horizon_forecast(
             for col in feature_cols:
                 if group_col and col == group_col:
                     rec[col] = grp
+                elif "discount" in col.lower():
+                    rec[col] = planned_discount_pct if planned_promo else 0
                 elif event_pattern.search(col):
-                    rec[col] = 0
+                    rec[col] = 1 if planned_promo else 0
+                elif any(token in col.lower() for token in ("price", "cost", "rate")):
+                    base_value = last_row[col]
+                    rec[col] = base_value * (1 + planned_price_change_pct / 100.0)
                 elif "payday" in col.lower():
                     rec[col] = 1 if (f_dt.day >= 25 or f_dt.day <= 3) else 0
                 else:
@@ -589,6 +637,10 @@ def run_auto_horizon_forecast(
     # 1. Out-of-sample backtest on trailing 20% for honest MAPE benchmark
     split_pos = int(len(df_active) * 0.8)
     non_zero_val = y_hist[split_pos:] > 0
+    baseline_mape_pct = None
+    wape_pct = None
+    mae_value = None
+    bias_pct = None
     if len(df_active) >= 40 and non_zero_val.sum() >= 5:
         bt_model = AutoML()
         bt_model.fit(
@@ -605,11 +657,21 @@ def run_auto_horizon_forecast(
             float(mean_absolute_percentage_error(y_hist[split_pos:][non_zero_val], val_preds[non_zero_val])) * 100,
             1,
         )
+        baseline_value = float(np.mean(y_hist[max(0, split_pos - 7):split_pos]))
+        baseline_preds = np.full(len(y_hist[split_pos:]), baseline_value)
+        baseline_mape_pct = round(
+            float(mean_absolute_percentage_error(y_hist[split_pos:][non_zero_val], baseline_preds[non_zero_val])) * 100,
+            1,
+        )
+        val_actuals = y_hist[split_pos:]
+        val_errors = val_preds - val_actuals
+        mae_value = round(float(np.mean(np.abs(val_errors))), 2)
+        wape_pct = round(float(np.sum(np.abs(val_errors)) / max(np.sum(np.abs(val_actuals)), 1e-9)) * 100, 1)
+        bias_pct = round(float(np.sum(val_errors) / max(np.sum(np.abs(val_actuals)), 1e-9)) * 100, 1)
     else:
-        mape_pct = 6.5
+        mape_pct = None
 
-    mape_pct = min(max(mape_pct, 1.2), 35.0)
-    accuracy_pct = round(100.0 - mape_pct, 1)
+    accuracy_pct = round(100.0 - mape_pct, 1) if mape_pct is not None else None
 
     # 2. Full-history FLAML fit for production forecast
     automl = AutoML()
@@ -624,16 +686,24 @@ def run_auto_horizon_forecast(
     )
 
     hist_preds = np.maximum(automl.predict(X_hist_raw), 0.0)
-    fut_preds = np.maximum(automl.predict(X_fut_raw), 0.0)
+    fut_preds = np.maximum(automl.predict(X_fut_raw), 0.0) * scenario_multiplier
+    uncertainty_pct = max(5.0, min(35.0, mape_pct * 1.25)) if mape_pct is not None else 20.0
+    fut_low = np.maximum(fut_preds * (1 - uncertainty_pct / 100.0), 0.0)
+    fut_high = fut_preds * (1 + uncertainty_pct / 100.0)
 
     # 3. Compute SHAP explanations on future forecast rows
     estimator = automl.model.estimator
     try:
+        expected_features = getattr(estimator, "n_features_in_", None)
+        if expected_features is not None and expected_features != X_fut_raw.shape[1]:
+            raise ValueError("The selected model does not expose the same feature count for explanations.")
         explainer = shap.TreeExplainer(estimator)
         shap_vals = explainer.shap_values(X_fut_raw)
         if isinstance(shap_vals, list):
             shap_vals = shap_vals[0]
         shap_vals = np.asarray(shap_vals)
+        if shap_vals.ndim != 2 or shap_vals.shape[1] != X_fut_raw.shape[1]:
+            raise ValueError("The explanation output does not match the forecast feature columns.")
     except Exception:
         # SHAP can fail with some LightGBM/SHAP combinations when categorical
         # columns are present. Forecasting remains usable without explanations.
@@ -690,17 +760,50 @@ def run_auto_horizon_forecast(
     hist_out["_sort_date"] = df_active["_parsed_date"]
     hist_out["smartaira_row_type"] = "HISTORICAL"
     hist_out["smartaira_predicted_value"] = np.round(hist_preds, 2)
+    hist_out["smartaira_forecast_low"] = np.nan
+    hist_out["smartaira_forecast_high"] = np.nan
     hist_out["smartaira_top_drivers"] = "بيانات فعلية سابقة"
-    hist_out["smartaira_model_mape_pct"] = f"{mape_pct:.1f}%"
+    mape_display = f"{mape_pct:.1f}%" if mape_pct is not None else "غير متاح"
+    hist_out["smartaira_model_mape_pct"] = mape_display
     hist_out["smartaira_approval_status"] = approval_status
 
     fut_out = future_df[original_cols].copy()
     fut_out["_sort_date"] = future_df["_parsed_date"]
     fut_out["smartaira_row_type"] = "FORECAST"
     fut_out["smartaira_predicted_value"] = np.round(fut_preds, 2)
+    fut_out["smartaira_forecast_low"] = np.round(fut_low, 2)
+    fut_out["smartaira_forecast_high"] = np.round(fut_high, 2)
     fut_out["smartaira_top_drivers"] = top_drivers_per_row
-    fut_out["smartaira_model_mape_pct"] = f"{mape_pct:.1f}%"
+    fut_out["smartaira_model_mape_pct"] = mape_display
     fut_out["smartaira_approval_status"] = approval_status
+
+    history_with_preds = df_active[[date_col] + ([group_col] if group_col else []) + [target_col]].copy()
+    history_with_preds["_historical_prediction"] = hist_preds
+    series_accuracy_rows = []
+    accuracy_groups = active_groups if group_col else [None]
+    for accuracy_group in accuracy_groups:
+        sample = (
+            history_with_preds[history_with_preds[group_col] == accuracy_group]
+            if group_col
+            else history_with_preds
+        )
+        actual = sample[target_col].to_numpy(dtype=float)
+        predicted = sample["_historical_prediction"].to_numpy(dtype=float)
+        non_zero = actual > 0
+        series_accuracy_rows.append(
+            {
+                (group_col or "السلسلة"): accuracy_group or "إجمالي الشركة",
+                "نسبة الخطأ التاريخية": round(
+                    float(mean_absolute_percentage_error(actual[non_zero], predicted[non_zero])) * 100, 1
+                ) if non_zero.any() else None,
+                "الخطأ على إجمالي المبيعات": round(
+                    float(np.sum(np.abs(predicted - actual)) / max(np.sum(np.abs(actual)), 1e-9)) * 100, 1
+                ),
+                "متوسط الخطأ": round(float(np.mean(np.abs(predicted - actual))), 2),
+                "الانحراف": round(float(np.mean(predicted - actual)), 2),
+            }
+        )
+    series_accuracy_df = pd.DataFrame(series_accuracy_rows)
 
     combined = pd.concat([hist_out, fut_out], ignore_index=True).sort_values("_sort_date")
 
@@ -730,6 +833,13 @@ def run_auto_horizon_forecast(
                     f"توقعات الـ {horizon} يوم القادمة": round(fut_sum, 2),
                     "نسبة التغير": round(g_delta, 1),
                     "متوسط التوقع اليومي": round(float(g_fut.mean()), 2),
+                    "الحد الأدنى المتوقع": round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_low"].sum()), 2),
+                    "الحد الأعلى المتوقع": round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_high"].sum()), 2),
+                    "الإجراء المقترح": (
+                        "زيادة المتابعة والمخزون" if g_delta >= 10 else
+                        "مراجعة السبب ووضع خطة تنشيط" if g_delta <= -10 else
+                        "استمر في المتابعة"
+                    ),
                     "أعلى يوم متوقع": str(
                         fut_out[fut_out[group_col] == grp]
                         .sort_values("smartaira_predicted_value", ascending=False)
@@ -749,6 +859,13 @@ def run_auto_horizon_forecast(
                     f"توقعات الـ {horizon} يوم القادمة": round(total_forecast, 2),
                     "نسبة التغير": round(growth_pct, 1),
                     "متوسط التوقع اليومي": round(float(fut_out["smartaira_predicted_value"].mean()), 2),
+                    "الحد الأدنى المتوقع": round(float(fut_out["smartaira_forecast_low"].sum()), 2),
+                    "الحد الأعلى المتوقع": round(float(fut_out["smartaira_forecast_high"].sum()), 2),
+                    "الإجراء المقترح": (
+                        "زيادة المتابعة والمخزون" if growth_pct >= 10 else
+                        "مراجعة السبب ووضع خطة تنشيط" if growth_pct <= -10 else
+                        "استمر في المتابعة"
+                    ),
                     "أعلى يوم متوقع": str(
                         fut_out.sort_values("smartaira_predicted_value", ascending=False).iloc[0][date_col]
                     ),
@@ -759,15 +876,25 @@ def run_auto_horizon_forecast(
     return {
         "combined_df": combined,
         "series_summary_df": series_summary_df,
+        "series_accuracy_df": series_accuracy_df,
         "driver_summary": driver_summary,
         "granularity": granularity,
         "n_series": n_series,
         "active_groups": active_groups,
+        "excluded_groups": excluded_groups,
         "mape_pct": mape_pct,
+        "baseline_mape_pct": baseline_mape_pct,
+        "wape_pct": wape_pct,
+        "mae_value": mae_value,
+        "bias_pct": bias_pct,
         "accuracy_pct": accuracy_pct,
         "best_estimator": str(automl.best_estimator).upper(),
         "total_forecast": total_forecast,
         "growth_pct": growth_pct,
+        "scenario_name": scenario_name,
+        "uncertainty_pct": uncertainty_pct,
+        "forecast_low_total": float(fut_low.sum()),
+        "forecast_high_total": float(fut_high.sum()),
         "top_driver_name": top_driver_name,
         "forecast_start_date": future_df["_parsed_date"].min(),
         "date_col": date_col,
@@ -941,6 +1068,9 @@ def main() -> None:
         "forecast_result": None,
         "approval_status": "PENDING",
         "approved_at": None,
+        "approved_by": None,
+        "approval_comment": "",
+        "forecast_history": [],
     }
     for k, v in default_state.items():
         if k not in st.session_state:
@@ -1028,6 +1158,12 @@ def main() -> None:
     date_col = target_col = None
     group_col: Optional[str] = None
     horizon = 30
+    scenario_name = "الحالة الأساسية"
+    scenario_multiplier = 1.0
+    planned_promo = False
+    planned_discount_pct = 0.0
+    planned_price_change_pct = 0.0
+    sales_target = 0.0
 
     if df_loaded is not None:
         st.divider()
@@ -1050,6 +1186,20 @@ def main() -> None:
         group_choice = st.selectbox("التقسيم حسب فرع أو صنف (اختياري)", options=default_group_choices, index=default_group_idx)
         group_col = None if group_choice == "بدون تقسيم (إجمالي الشركة)" else group_choice
         horizon = st.selectbox("عدد الفترات القادمة", options=[7, 14, 30, 60], index=2, format_func=lambda x: f"{x} يوم")
+
+        with st.expander("تحسين التوقع حسب خطتك (اختياري)", expanded=False):
+            scenario_options = {
+                "الحالة الأساسية": 1.0,
+                "نمو متفائل (+10%)": 1.10,
+                "حالة حذرة (-10%)": 0.90,
+            }
+            scenario_name = st.selectbox("اختر السيناريو", options=list(scenario_options))
+            scenario_multiplier = scenario_options[scenario_name]
+            planned_promo = st.checkbox("يوجد عرض أو حملة خلال الفترة القادمة")
+            if planned_promo:
+                planned_discount_pct = st.number_input("نسبة الخصم المتوقعة (%)", min_value=0.0, max_value=90.0, value=10.0, step=1.0)
+            planned_price_change_pct = st.number_input("تغير السعر المتوقع (%)", min_value=-90.0, max_value=200.0, value=0.0, step=1.0)
+            sales_target = st.number_input("هدف المبيعات للفترة القادمة (اختياري)", min_value=0.0, value=0.0, step=1000.0)
 
         run_clicked = st.button("ابدأ توقع المبيعات", type="primary", width="stretch")
     else:
@@ -1122,6 +1272,11 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
+    if res["excluded_groups"]:
+        excluded_text = "، ".join(str(item) for item in res["excluded_groups"][:8])
+        st.warning(
+            f"تم استبعاد {len(res['excluded_groups'])} فرع/مجموعة بدون مبيعات حديثة من التوقع: {excluded_text}."
+        )
 
     with st.expander("معاينة بيانات المبيعات — أول 5 صفوف", expanded=False):
         st.dataframe(df_loaded.head(5), width="stretch", hide_index=True)
@@ -1136,8 +1291,23 @@ def main() -> None:
                 group_col=group_col,
                 horizon=horizon,
                 approval_status="PENDING",
+                scenario_name=scenario_name,
+                scenario_multiplier=scenario_multiplier,
+                planned_promo=planned_promo,
+                planned_discount_pct=planned_discount_pct,
+                planned_price_change_pct=planned_price_change_pct,
             )
+            result["sales_target"] = sales_target
+            result["target_gap"] = sales_target - result["total_forecast"] if sales_target > 0 else None
             st.session_state["forecast_result"] = result
+            st.session_state["forecast_history"].append(
+                {
+                    "وقت التشغيل": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "السيناريو": scenario_name,
+                    "إجمالي التوقع": result["total_forecast"],
+                    "نسبة التغير": result["growth_pct"],
+                }
+            )
             st.session_state["approval_status"] = "PENDING"
             st.session_state["approved_at"] = None
             st.rerun()
@@ -1153,6 +1323,25 @@ def main() -> None:
 
     st.divider()
 
+    trend_word = "زيادة" if res["growth_pct"] >= 0 else "انخفاض"
+    target_message = ""
+    if res.get("sales_target"):
+        gap = res["target_gap"]
+        target_message = (
+            f" الهدف أعلى من التوقع بـ {abs(gap):,.0f}." if gap > 0 else
+            f" التوقع أعلى من الهدف بـ {abs(gap):,.0f}."
+        )
+    st.markdown(
+        f"""
+        <div class="exec-callout">
+            <b>ملخص المدير:</b> نتوقع {trend_word} المبيعات بنسبة <b>{abs(res['growth_pct']):.1f}%</b> خلال {res['horizon']} يوم.
+            النطاق المتوقع من <b>{res['forecast_low_total']:,.0f}</b> إلى <b>{res['forecast_high_total']:,.0f}</b>.
+            السيناريو المستخدم: <b>{res['scenario_name']}</b>.{target_message}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Executive KPI Cards
     k1, k2, k3, k4 = st.columns(4)
     with k1:
@@ -1162,10 +1351,12 @@ def main() -> None:
             delta=f"{res['growth_pct']:+.1f}% مقارنة بالفترة السابقة",
         )
     with k2:
+        accuracy_display = f"{res['accuracy_pct']:.1f}%" if res.get("accuracy_pct") is not None else "غير متاح"
+        error_display = f"نسبة الخطأ: {res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "لا توجد بيانات اختبار كافية"
         st.metric(
             label="مدى دقة التوقع",
-            value=f"{res['accuracy_pct']:.1f}%",
-            delta=f"نسبة الخطأ: {res['mape_pct']:.1f}%",
+            value=accuracy_display,
+            delta=error_display,
             delta_color="off",
         )
     with k3:
@@ -1336,10 +1527,13 @@ def main() -> None:
 
         with sub_c2:
             st.subheader("🎯 مؤشر ثقة التوقع")
-            st.plotly_chart(
-                build_accuracy_gauge(res["accuracy_pct"], res["mape_pct"]),
-                width="stretch",
-            )
+            if res.get("accuracy_pct") is not None and res.get("mape_pct") is not None:
+                st.plotly_chart(
+                    build_accuracy_gauge(res["accuracy_pct"], res["mape_pct"]),
+                    width="stretch",
+                )
+            else:
+                st.info("لا توجد بيانات تاريخية كافية لقياس الدقة بعد. سيظل التوقع متاحاً مع نطاق احتياطي.")
 
     # -------------------------------------------------------------------------
     # TAB 2: Interactive 3D Multi-Branch Demand Terrain
@@ -1356,6 +1550,41 @@ def main() -> None:
     # -------------------------------------------------------------------------
     with tab_table:
         st.subheader("📑 ملخص التوقعات حسب الفرع أو المجموعة")
+        metric_cols = st.columns(4)
+        with metric_cols[0]:
+            mape_display = f"{res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "غير متاح"
+            st.metric("خطأ التوقع", mape_display)
+        with metric_cols[1]:
+            wape_display = f"{res['wape_pct']:.1f}%" if res.get("wape_pct") is not None else "غير متاح"
+            st.metric("الخطأ على إجمالي المبيعات", wape_display)
+        with metric_cols[2]:
+            bias_display = f"{res['bias_pct']:+.1f}%" if res.get("bias_pct") is not None else "غير متاح"
+            st.metric("هل نبالغ أم نقلل؟", bias_display)
+        with metric_cols[3]:
+            baseline_display = f"{res['baseline_mape_pct']:.1f}%" if res.get("baseline_mape_pct") is not None else "غير متاح"
+            st.metric("مقارنة بالتوقع البسيط", baseline_display)
+        st.caption("كلما انخفضت نسب الخطأ كان التوقع أقرب للواقع. الإشارة الموجبة تعني أن التوقع أعلى من المبيعات الفعلية في الاختبار السابق.")
+
+        with st.expander("تنبيهات تحتاج متابعة", expanded=True):
+            exceptions_df = res["series_summary_df"].copy()
+            exception_columns = [
+                g_col or "السلسلة",
+                "نسبة التغير",
+                f"توقعات الـ {res['horizon']} يوم القادمة",
+                "الإجراء المقترح",
+            ]
+            exception_columns = [c for c in exception_columns if c in exceptions_df.columns]
+            if "نسبة التغير" in exceptions_df.columns:
+                exceptions_df = exceptions_df.sort_values("نسبة التغير")
+            st.dataframe(exceptions_df[exception_columns].head(5), width="stretch", hide_index=True)
+
+        with st.expander("دقة المتابعة حسب الفرع أو المجموعة", expanded=False):
+            st.dataframe(res["series_accuracy_df"], width="stretch", hide_index=True)
+
+        if len(st.session_state.get("forecast_history", [])) > 1:
+            with st.expander("مقارنة بالتوقعات السابقة", expanded=False):
+                st.dataframe(pd.DataFrame(st.session_state["forecast_history"]), width="stretch", hide_index=True)
+
         st.dataframe(
             res["series_summary_df"],
             width="stretch",
@@ -1384,6 +1613,8 @@ def main() -> None:
             columns={
                 "smartaira_row_type": "نوع الصف",
                 "smartaira_predicted_value": "المبيعات المتوقعة",
+                "smartaira_forecast_low": "الحد الأدنى المتوقع",
+                "smartaira_forecast_high": "الحد الأعلى المتوقع",
                 "smartaira_top_drivers": "أهم العوامل المؤثرة",
                 "smartaira_model_mape_pct": "نسبة الخطأ في التوقع",
                 "smartaira_approval_status": "حالة الاعتماد",
@@ -1448,21 +1679,37 @@ def main() -> None:
         f"""
         <div class="exec-callout">
             ✅ <b>اكتمل التحليل بنجاح:</b> تم بناء التوقعات اعتماداً على أنماط المبيعات التاريخية لـ
-            <b>{res['n_series']} سلسلة/فرع</b> بدقة تاريخية <b>{res['accuracy_pct']:.1f}%</b>.
+            <b>{res['n_series']} سلسلة/فرع</b> بدقة تاريخية <b>{f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else "غير متاحة بعد"}</b>.
             راجع الرسوم البيانية ثنائية وثلاثية الأبعاد والجدول التفصيلي ثم اعتمد الخطة أو حمّل الملف بصيغة Excel/CSV.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    if st.session_state["approval_status"] != "APPROVED":
+        approval_comment = st.text_area(
+            "تعليق المدير قبل الاعتماد (اختياري)",
+            value=st.session_state.get("approval_comment", ""),
+            placeholder="مثال: تم الاعتماد مع زيادة المخزون في فرع مدينة نصر.",
+        )
+    else:
+        approval_comment = st.session_state.get("approval_comment", "")
+
     gov_c1, gov_c2 = st.columns(2)
     with gov_c1:
         if st.session_state["approval_status"] == "APPROVED":
-            st.success(f"✅ تم اعتماد التوقعات ({st.session_state['approved_at']})")
+            st.success(
+                f"✅ تم اعتماد التوقعات بواسطة {st.session_state.get('approved_by', 'المدير')} "
+                f"({st.session_state['approved_at']})"
+            )
+            if approval_comment:
+                st.caption(f"ملاحظة الاعتماد: {approval_comment}")
         else:
             if st.button("✅ اعتماد خطة التوقعات", width="stretch"):
                 st.session_state["approval_status"] = "APPROVED"
                 st.session_state["approved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                st.session_state["approved_by"] = st.session_state.get("current_user", "المدير")
+                st.session_state["approval_comment"] = approval_comment
                 st.rerun()
     with gov_c2:
         csv_bytes = download_df.to_csv(index=False).encode("utf-8-sig")
