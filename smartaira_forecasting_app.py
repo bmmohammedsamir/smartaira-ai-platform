@@ -875,11 +875,11 @@ def main() -> None:
                 if submitted:
                     configured_credentials_valid = (
                         username_input.strip().lower() == expected_user.lower()
-                        and password_input == expected_password
+                        and password_input.strip() == expected_password
                     )
                     demo_credentials_valid = (
                         username_input.strip().lower() == "smartaira"
-                        and password_input == "smartaira"
+                        and password_input.strip().lower() == "smartaira"
                     )
                     if configured_credentials_valid or demo_credentials_valid:
                         st.session_state["authenticated"] = True
