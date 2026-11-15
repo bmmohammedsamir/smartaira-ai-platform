@@ -15,7 +15,7 @@ from sklearn.metrics import mean_absolute_percentage_error
 import streamlit as st
 
 
-BUILD_ID_FALLBACK = "4727827"
+BUILD_ID_FALLBACK = "4ee74cf"
 
 
 def get_build_id() -> str:
@@ -1097,6 +1097,7 @@ def main() -> None:
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
     build_id = get_build_id()
+    st.markdown(f"### 🔖 إصدار التطبيق الحالي: `{build_id}`")
     st.markdown(
         f'<div class="build-header">نسخة التطبيق الحالية: <code>{build_id}</code></div>',
         unsafe_allow_html=True,
