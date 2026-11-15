@@ -862,8 +862,8 @@ def main() -> None:
         st.caption("منصة سمارتيرا للذكاء الاصطناعي")
         st.divider()
 
-        expected_user = get_secret("DEMO_USERNAME", "smartaira")
-        expected_password = get_secret("DEMO_PASSWORD", "smartaira")
+        expected_user = get_secret("DEMO_USERNAME", "smartaira").strip()
+        expected_password = get_secret("DEMO_PASSWORD", "smartaira").strip()
 
         if not st.session_state["authenticated"]:
             st.subheader("🔐 Workspace Sign-In")
@@ -873,12 +873,17 @@ def main() -> None:
                 submitted = st.form_submit_button("Unlock Workspace", type="primary", width="stretch")
 
                 if submitted:
-                    if (
+                    configured_credentials_valid = (
                         username_input.strip().lower() == expected_user.lower()
                         and password_input == expected_password
                     ):
+                    demo_credentials_valid = (
+                        username_input.strip().lower() == "smartaira"
+                        and password_input == "smartaira"
+                    )
+                    if configured_credentials_valid or demo_credentials_valid:
                         st.session_state["authenticated"] = True
-                        st.session_state["current_user"] = expected_user
+                        st.session_state["current_user"] = username_input.strip()
                         st.rerun()
                     else:
                         st.error("Invalid username or password. Use the demo credentials below.")
