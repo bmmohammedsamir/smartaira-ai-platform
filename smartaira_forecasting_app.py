@@ -28,6 +28,41 @@ BRAND_CSS = """
     [data-testid="stAppViewContainer"] {
         direction: rtl;
     }
+    @media (max-width: 640px) {
+        .smartaira-hero {
+            padding: 1.15rem 1rem;
+            border-radius: 12px;
+        }
+        .smartaira-hero h1 {
+            font-size: 1.55rem;
+            line-height: 1.55;
+        }
+        .smartaira-tagline-ar {
+            font-size: 1rem;
+        }
+        .smartaira-sub-ar {
+            font-size: 0.9rem;
+        }
+        .value-card {
+            padding: 0.95rem;
+        }
+        .login-card {
+            padding: 1.15rem;
+            margin: 0.5rem 0 1rem;
+        }
+    }
+    .login-card {
+        background: #FFFFFF;
+        border: 1px solid #CBD5E1;
+        border-top: 5px solid #10B981;
+        border-radius: 14px;
+        padding: 1.5rem;
+        max-width: 560px;
+        margin: 1rem auto 1.5rem;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+        direction: rtl;
+        text-align: right;
+    }
     .smartaira-hero {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
         color: #FFFFFF;
@@ -798,7 +833,7 @@ def main() -> None:
         page_title="منصة سمارتيرا لتوقع المبيعات",
         page_icon="📈",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="collapsed",
     )
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
 
@@ -814,6 +849,39 @@ def main() -> None:
     for k, v in default_state.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+    if not st.session_state["authenticated"]:
+        st.markdown(
+            """
+            <style>
+                [data-testid="stSidebar"] { display: none; }
+            </style>
+            <div class="login-card">
+                <h2>🔐 الدخول إلى منصة سمارتيرا</h2>
+                <p>استخدم بيانات الدخول الجاهزة للانتقال إلى مساحة توقع المبيعات.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        expected_user = get_secret("DEMO_USERNAME", "smartaira").strip()
+        expected_password = get_secret("DEMO_PASSWORD", "smartaira").strip()
+        with st.form("mobile_login_form"):
+            username_input = st.text_input("اسم المستخدم", value="smartaira")
+            password_input = st.text_input("كلمة المرور", value="smartaira", type="password")
+            submitted = st.form_submit_button("دخول", type="primary", width="stretch")
+            if submitted:
+                credentials_valid = (
+                    username_input.strip().lower() in {expected_user.lower(), "smartaira"}
+                    and password_input.strip().lower() in {expected_password.lower(), "smartaira"}
+                )
+                if credentials_valid:
+                    st.session_state["authenticated"] = True
+                    st.session_state["current_user"] = username_input.strip()
+                    st.rerun()
+                else:
+                    st.error("اسم المستخدم أو كلمة المرور غير صحيحة. جرّب smartaira في الخانتين.")
+        st.info("بيانات الدخول التجريبية: smartaira / smartaira")
+        st.stop()
 
     # Hero Banner & Value Cards
     st.markdown(
