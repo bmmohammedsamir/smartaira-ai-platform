@@ -881,8 +881,8 @@ def main() -> None:
         if not st.session_state["authenticated"]:
             st.subheader("🔐 الدخول إلى مساحة العمل")
             with st.form("login_form"):
-                username_input = st.text_input("اسم المستخدم", placeholder="smartaira")
-                password_input = st.text_input("كلمة المرور", type="password", placeholder="smartaira")
+                username_input = st.text_input("اسم المستخدم", value="smartaira")
+                password_input = st.text_input("كلمة المرور", value="smartaira", type="password")
                 submitted = st.form_submit_button("دخول", type="primary", width="stretch")
 
                 if submitted:
