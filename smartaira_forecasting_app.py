@@ -91,6 +91,15 @@ BRAND_CSS = """
         direction: rtl;
     }
     @media (max-width: 640px) {
+        [data-testid="stMainBlockContainer"] {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        .status-strip {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
         .smartaira-hero {
             padding: 1.15rem 1rem;
             border-radius: 12px;
@@ -323,6 +332,14 @@ def get_secret(key: str, default: str) -> str:
         return str(st.secrets.get(key, default))
     except Exception:
         return default
+
+
+def has_configured_login() -> bool:
+    """Use demo login only when no complete production credentials are configured."""
+    try:
+        return bool(st.secrets.get("DEMO_USERNAME")) and bool(st.secrets.get("DEMO_PASSWORD"))
+    except Exception:
+        return False
 
 
 # -----------------------------------------------------------------------------
@@ -1115,29 +1132,39 @@ def main() -> None:
         )
         expected_user = get_secret("DEMO_USERNAME", "smartaira").strip()
         expected_password = get_secret("DEMO_PASSWORD", "smartaira").strip()
+        configured_login = has_configured_login()
         with st.form("mobile_login_form"):
             username_input = st.text_input("اسم المستخدم", value="smartaira")
             password_input = st.text_input("كلمة المرور", value="smartaira", type="password")
             submitted = st.form_submit_button("دخول", type="primary", width="stretch")
             if submitted:
-                credentials_valid = (
-                    username_input.strip().lower() in {expected_user.lower(), "smartaira"}
-                    and password_input.strip().lower() in {expected_password.lower(), "smartaira"}
-                )
+                if configured_login:
+                    credentials_valid = (
+                        username_input.strip().lower() == expected_user.lower()
+                        and password_input.strip() == expected_password
+                    )
+                else:
+                    credentials_valid = (
+                        username_input.strip().lower() == "smartaira"
+                        and password_input.strip().lower() == "smartaira"
+                    )
                 if credentials_valid:
                     st.session_state["authenticated"] = True
                     st.session_state["current_user"] = username_input.strip()
                     st.rerun()
                 else:
                     st.error("اسم المستخدم أو كلمة المرور غير صحيحة. جرّب smartaira في الخانتين.")
-        st.info("بيانات الدخول التجريبية: smartaira / smartaira")
+        if configured_login:
+            st.info("استخدم بيانات الدخول التي جهزها مسؤول المنصة.")
+        else:
+            st.info("بيانات الدخول التجريبية: smartaira / smartaira — للعرض فقط")
         st.stop()
 
     # Hero Banner & Value Cards
     st.markdown(
         f"""
         <div class="smartaira-hero">
-            <span class="smartaira-badge">منصة سمارتيرا • توقع المبيعات • Commit {build_id}</span>
+            <span class="smartaira-badge">منصة سمارتيرا • توقع المبيعات</span>
             <h1>منصة سمارتيرا لتوقع المبيعات</h1>
             <div class="smartaira-tagline-ar">سمارتيرا.. ذكاء اصطناعي لقرارات شركتك</div>
             <p class="smartaira-sub-ar">
@@ -1154,7 +1181,7 @@ def main() -> None:
     data_mode = st.radio(
         "مصدر البيانات",
         ["تجربة ببيانات جاهزة", "رفع ملف المبيعات"],
-        horizontal=True,
+        horizontal=False,
     )
 
     if data_mode == "تجربة ببيانات جاهزة":
@@ -1296,12 +1323,6 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
-    if res["excluded_groups"]:
-        excluded_text = "، ".join(str(item) for item in res["excluded_groups"][:8])
-        st.warning(
-            f"تم استبعاد {len(res['excluded_groups'])} فرع/مجموعة بدون مبيعات حديثة من التوقع: {excluded_text}."
-        )
-
     with st.expander("معاينة بيانات المبيعات — أول 5 صفوف", expanded=False):
         st.dataframe(df_loaded.head(5), width="stretch", hide_index=True)
 
@@ -1345,6 +1366,12 @@ def main() -> None:
         )
         st.stop()
 
+    if res.get("excluded_groups"):
+        excluded_text = "، ".join(str(item) for item in res["excluded_groups"][:8])
+        st.warning(
+            f"تم استبعاد {len(res['excluded_groups'])} فرع/مجموعة بدون مبيعات حديثة من التوقع: {excluded_text}."
+        )
+
     st.divider()
 
     trend_word = "زيادة" if res["growth_pct"] >= 0 else "انخفاض"
@@ -1367,7 +1394,8 @@ def main() -> None:
     )
 
     # Executive KPI Cards
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2 = st.columns(2)
+    k3, k4 = st.columns(2)
     with k1:
         st.metric(
             label=f"إجمالي التوقعات لـ {res['horizon']} يوم",
@@ -1401,11 +1429,11 @@ def main() -> None:
     st.markdown("---")
 
     # Multi-View Analytics Workspace: 2D Graphics + 3D Terrain + Tabular Plans
-    tab_2d, tab_3d, tab_table = st.tabs(
+    tab_decision, tab_charts, tab_3d = st.tabs(
         [
+            "✅ القرار والتنبيهات",
             "📈 الاتجاهات والعوامل المؤثرة",
-            "🌐 خريطة الطلب ثلاثية الأبعاد",
-            "📋 جدول التوقعات والتصدير",
+            "🌐 تفاصيل الفروع",
         ]
     )
 
@@ -1416,7 +1444,7 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # TAB 1: 2D Interactive Charts & Executive Gauge
     # -------------------------------------------------------------------------
-    with tab_2d:
+    with tab_charts:
         chart_col1, chart_col2 = st.columns([1.45, 1.0], gap="large")
 
         with chart_col1:
@@ -1513,7 +1541,7 @@ def main() -> None:
                         ),
                         tooltip=[
                             alt.Tooltip("Driver:N"),
-                            alt.Tooltip("Avg_Impact:Q", title="Avg Sales Impact", format="+,.1f"),
+                            alt.Tooltip("Avg_Impact:Q", title="التأثير على المبيعات", format="+,.1f"),
                         ],
                     )
                     .properties(height=360)
@@ -1550,7 +1578,7 @@ def main() -> None:
             st.altair_chart(comp_chart, width="stretch")
 
         with sub_c2:
-            st.subheader("🎯 مؤشر ثقة التوقع")
+            st.subheader("🎯 مدى قرب التوقع من الواقع")
             if res.get("accuracy_pct") is not None and res.get("mape_pct") is not None:
                 st.plotly_chart(
                     build_accuracy_gauge(res["accuracy_pct"], res["mape_pct"]),
@@ -1563,66 +1591,83 @@ def main() -> None:
     # TAB 2: Interactive 3D Multi-Branch Demand Terrain
     # -------------------------------------------------------------------------
     with tab_3d:
-        st.subheader("🌐 خريطة الطلب للفروع (حرّك الصورة للتدوير والتكبير)")
+        st.subheader("🌐 تفاصيل الطلب حسب الفروع")
         st.caption(
-            "توضح المبيعات المتوقعة حسب التاريخ والفروع والسيناريوهات، لتساعدك على رؤية الأيام الأعلى طلباً."
+            "شاشة تفصيلية اختيارية لرؤية الأيام الأعلى طلباً حسب الفروع والسيناريوهات."
         )
         st.plotly_chart(build_3d_forecast_figure(res), width="stretch")
 
     # -------------------------------------------------------------------------
-    # TAB 3: Executive Summary Table, Row-Level Forecast Grid & CSV Export
+    # TAB 3: Decision-first summary, alerts, and export
     # -------------------------------------------------------------------------
-    with tab_table:
-        st.subheader("📑 ملخص التوقعات حسب الفرع أو المجموعة")
-        metric_cols = st.columns(4)
-        with metric_cols[0]:
-            mape_display = f"{res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "غير متاح"
-            st.metric("خطأ التوقع", mape_display)
-        with metric_cols[1]:
-            wape_display = f"{res['wape_pct']:.1f}%" if res.get("wape_pct") is not None else "غير متاح"
-            st.metric("الخطأ على إجمالي المبيعات", wape_display)
-        with metric_cols[2]:
-            bias_display = f"{res['bias_pct']:+.1f}%" if res.get("bias_pct") is not None else "غير متاح"
-            st.metric("هل نبالغ أم نقلل؟", bias_display)
-        with metric_cols[3]:
-            baseline_display = f"{res['baseline_mape_pct']:.1f}%" if res.get("baseline_mape_pct") is not None else "غير متاح"
-            st.metric("مقارنة بالتوقع البسيط", baseline_display)
-        st.caption("كلما انخفضت نسب الخطأ كان التوقع أقرب للواقع. الإشارة الموجبة تعني أن التوقع أعلى من المبيعات الفعلية في الاختبار السابق.")
+    with tab_decision:
+        st.subheader("✅ ماذا نفعل الآن؟")
+        st.caption("ابدأ بالفروع التي تحتاج متابعة، ثم افتح التفاصيل عند الحاجة.")
 
         with st.expander("تنبيهات تحتاج متابعة", expanded=True):
             exceptions_df = res["series_summary_df"].copy()
-            exception_columns = [
-                g_col or "السلسلة",
-                "نسبة التغير",
-                f"توقعات الـ {res['horizon']} يوم القادمة",
-                "الإجراء المقترح",
-            ]
-            exception_columns = [c for c in exception_columns if c in exceptions_df.columns]
             if "نسبة التغير" in exceptions_df.columns:
                 exceptions_df = exceptions_df.sort_values("نسبة التغير")
-            st.dataframe(exceptions_df[exception_columns].head(5), width="stretch", hide_index=True)
+            forecast_column = f"توقعات الـ {res['horizon']} يوم القادمة"
+            for _, exception in exceptions_df.head(5).iterrows():
+                series_name = exception.get(g_col or "السلسلة", "إجمالي الشركة")
+                change_value = float(exception.get("نسبة التغير", 0) or 0)
+                change_word = "زيادة" if change_value >= 0 else "انخفاض"
+                forecast_value = float(exception.get(forecast_column, 0) or 0)
+                action = exception.get("الإجراء المقترح", "استمر في المتابعة")
+                with st.container(border=True):
+                    st.markdown(f"**{series_name}**")
+                    st.write(
+                        f"{change_word} {abs(change_value):.1f}% • "
+                        f"التوقع: {forecast_value:,.0f} • الإجراء: {action}"
+                    )
+
+        with st.expander("مؤشرات الدقة بطريقة مبسطة", expanded=False):
+            metric_cols = st.columns(2)
+            with metric_cols[0]:
+                mape_display = f"{res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "غير متاح"
+                st.metric("مدى قرب التوقع من الواقع", mape_display)
+            with metric_cols[1]:
+                wape_display = f"{res['wape_pct']:.1f}%" if res.get("wape_pct") is not None else "غير متاح"
+                st.metric("الخطأ على إجمالي المبيعات", wape_display)
+            metric_cols = st.columns(2)
+            with metric_cols[0]:
+                bias_display = f"{res['bias_pct']:+.1f}%" if res.get("bias_pct") is not None else "غير متاح"
+                st.metric("هل نبالغ أم نقلل؟", bias_display)
+            with metric_cols[1]:
+                baseline_display = f"{res['baseline_mape_pct']:.1f}%" if res.get("baseline_mape_pct") is not None else "غير متاح"
+                st.metric("مقارنة بالطريقة البسيطة", baseline_display)
+            st.caption("النسبة الأقل أفضل. الإشارة الموجبة تعني أن التوقع أعلى من المبيعات الفعلية في الاختبار السابق.")
+
+        with st.expander("ملخص كل فرع أو مجموعة", expanded=False):
+            st.dataframe(
+                res["series_summary_df"],
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    f"المبيعات السابقة لـ {res['horizon']} يوم": st.column_config.NumberColumn(format="%,.2f"),
+                    f"توقعات الـ {res['horizon']} يوم القادمة": st.column_config.NumberColumn(format="%,.2f"),
+                    "نسبة التغير": st.column_config.NumberColumn(format="%+.1f%%"),
+                    "متوسط التوقع اليومي": st.column_config.NumberColumn(format="%,.2f"),
+                },
+            )
 
         with st.expander("دقة المتابعة حسب الفرع أو المجموعة", expanded=False):
             st.dataframe(res["series_accuracy_df"], width="stretch", hide_index=True)
 
         if len(st.session_state.get("forecast_history", [])) > 1:
             with st.expander("مقارنة بالتوقعات السابقة", expanded=False):
-                st.dataframe(pd.DataFrame(st.session_state["forecast_history"]), width="stretch", hide_index=True)
+                history_df = pd.DataFrame(st.session_state["forecast_history"])
+                st.dataframe(history_df, width="stretch", hide_index=True)
+                st.download_button(
+                    "تحميل سجل المقارنة",
+                    data=history_df.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="smartaira_forecast_history.csv",
+                    mime="text/csv",
+                    width="stretch",
+                )
 
-        st.dataframe(
-            res["series_summary_df"],
-            width="stretch",
-            hide_index=True,
-            column_config={
-                f"المبيعات السابقة لـ {res['horizon']} يوم": st.column_config.NumberColumn(format="%,.2f"),
-                f"توقعات الـ {res['horizon']} يوم القادمة": st.column_config.NumberColumn(format="%,.2f"),
-                "نسبة التغير": st.column_config.NumberColumn(format="%+.1f%%"),
-                "متوسط التوقع اليومي": st.column_config.NumberColumn(format="%,.2f"),
-            },
-        )
-
-        st.markdown("---")
-        st.subheader("📋 خطة التوقعات التفصيلية")
+        st.subheader("📋 التفاصيل وملف التصدير")
 
         export_df = res["combined_df"].drop(columns=["_sort_date"]).copy()
         export_df["smartaira_approval_status"] = st.session_state["approval_status"]
@@ -1650,7 +1695,7 @@ def main() -> None:
             row_filter = st.radio(
                 "عرض البيانات",
                 ["التوقعات القادمة فقط", "كل البيانات السابقة والقادمة"],
-                horizontal=True,
+                horizontal=False,
             )
         with tbl_f2:
             if g_col:
@@ -1704,7 +1749,7 @@ def main() -> None:
         <div class="exec-callout">
             ✅ <b>اكتمل التحليل بنجاح:</b> تم بناء التوقعات اعتماداً على أنماط المبيعات التاريخية لـ
             <b>{res['n_series']} سلسلة/فرع</b> بدقة تاريخية <b>{f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else "غير متاحة بعد"}</b>.
-            راجع الرسوم البيانية ثنائية وثلاثية الأبعاد والجدول التفصيلي ثم اعتمد الخطة أو حمّل الملف بصيغة Excel/CSV.
+            راجع التنبيهات أولًا، ثم اعتمد الخطة أو حمّل ملف المبيعات المتوقع.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1729,6 +1774,7 @@ def main() -> None:
             if approval_comment:
                 st.caption(f"ملاحظة الاعتماد: {approval_comment}")
         else:
+            st.caption("الاعتماد يعني أن هذه الخطة أصبحت المرجع الحالي لفريق المبيعات.")
             if st.button("✅ اعتماد خطة التوقعات", width="stretch"):
                 st.session_state["approval_status"] = "APPROVED"
                 st.session_state["approved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
