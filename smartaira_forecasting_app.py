@@ -876,7 +876,7 @@ def main() -> None:
                     configured_credentials_valid = (
                         username_input.strip().lower() == expected_user.lower()
                         and password_input == expected_password
-                    ):
+                    )
                     demo_credentials_valid = (
                         username_input.strip().lower() == "smartaira"
                         and password_input == "smartaira"
