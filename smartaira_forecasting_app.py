@@ -101,18 +101,22 @@ BRAND_CSS = """
             gap: 0.5rem;
         }
         .smartaira-hero {
-            padding: 1.15rem 1rem;
+            padding: 0.9rem 1rem;
             border-radius: 12px;
+            margin-bottom: 0.75rem;
         }
         .smartaira-hero h1 {
-            font-size: 1.55rem;
-            line-height: 1.55;
+            font-size: 1.25rem;
+            line-height: 1.35;
+            margin-bottom: 0.2rem;
         }
+        .smartaira-badge { margin-bottom: 0.35rem; font-size: 0.72rem; }
         .smartaira-tagline-ar {
-            font-size: 1rem;
+            font-size: 0.92rem;
+            margin-bottom: 0;
         }
         .smartaira-sub-ar {
-            font-size: 0.9rem;
+            display: none;
         }
         .value-card {
             padding: 0.95rem;
@@ -131,10 +135,17 @@ BRAND_CSS = """
         .workflow-line {
             flex-basis: 7px;
         }
-        .js-plotly-plot,
-        .stPlotlyChart {
-            max-height: 380px;
-            overflow: hidden;
+        .workflow-step {
+            font-size: 0.72rem;
+            padding: 0.4rem 0.15rem;
+        }
+        .stPlotlyChart, .js-plotly-plot { max-width: 100%; }
+        [data-testid="stPlotlyChart"] { overflow-x: auto; }
+        [data-testid="stMetricValue"] {
+            font-size: 1.25rem;
+            direction: ltr;
+            unicode-bidi: isolate;
+            text-align: right;
         }
     }
     .login-card {
@@ -181,7 +192,7 @@ BRAND_CSS = """
     .smartaira-hero {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
         color: #FFFFFF;
-        padding: 1.85rem 2.1rem;
+        padding: 1.1rem 1.4rem;
         border-radius: 14px;
         border-left: 6px solid #10B981;
         margin-bottom: 1.25rem;
@@ -1099,7 +1110,6 @@ def main() -> None:
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
     build_id = get_build_id()
-    st.caption(f"نسخة التطبيق: {build_id}")
 
     default_state = {
         "authenticated": False,
@@ -1160,38 +1170,57 @@ def main() -> None:
             st.info("بيانات الدخول التجريبية: smartaira / smartaira — للعرض فقط")
         st.stop()
 
-    # Hero Banner & Value Cards
+    # Compact product header and visible workflow progress.
     st.markdown(
         f"""
         <div class="smartaira-hero">
-            <span class="smartaira-badge">منصة سمارتيرا • توقع المبيعات</span>
-            <h1>منصة سمارتيرا لتوقع المبيعات</h1>
-            <div class="smartaira-tagline-ar">سمارتيرا.. ذكاء اصطناعي لقرارات شركتك</div>
-            <p class="smartaira-sub-ar">
-                توقّع مبيعاتك بدقة.. واكتشف الأسباب الحقيقية وراء كل رقم. ارفع ملف المبيعات بصيغة CSV واحصل فوراً على
-                توقعات الفروع والأصناف، وتحليل تأثير العروض والمواسم، دون الحاجة لأي ربط معقد مع أنظمة الـ ERP.
-            </p>
+            <span class="smartaira-badge">سمارتيرا • توقع المبيعات</span>
+            <h1>توقّع مبيعاتك خلال دقائق</h1>
+            <div class="smartaira-tagline-ar">ارفع ملف CSV أو ابدأ ببيانات تجريبية</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    active_step = 3 if st.session_state["forecast_result"] is not None else (2 if st.session_state["raw_df"] is not None else 1)
+    step_labels = ["١. البيانات", "٢. الإعداد", "٣. النتيجة"]
+    step_markup = "".join(
+        f'<div class="workflow-step {"active" if i + 1 == active_step else ""}">{label}</div>'
+        + ('<span class="workflow-line"></span>' if i < 2 else '')
+        for i, label in enumerate(step_labels)
+    )
+    st.markdown(f'<div class="workflow-steps">{step_markup}</div>', unsafe_allow_html=True)
 
     # Main-page workflow controls: no sidebar required.
     st.markdown("### ١. اختر بيانات المبيعات")
     data_mode = st.radio(
         "مصدر البيانات",
         ["تجربة ببيانات جاهزة", "رفع ملف المبيعات"],
-        horizontal=False,
+        horizontal=True,
     )
 
     if data_mode == "تجربة ببيانات جاهزة":
-        if st.button("استخدام بيانات تجريبية جاهزة (720 صفاً)", width="stretch"):
+        if st.button("استخدام بيانات تجريبية جاهزة (720 صفاً)", type="primary", width="stretch"):
             st.session_state["raw_df"] = generate_sample_retail_csv()
             st.session_state["source_name"] = "smartaira_sample_retail_sales.csv"
             st.session_state["forecast_result"] = None
             st.session_state["approval_status"] = "PENDING"
             st.session_state["approved_at"] = None
     else:
+        template_df = pd.DataFrame(
+            {
+                "date": ["2026-01-01", "2026-01-02"],
+                "sales_amount": [12500, 13800],
+                "branch": ["فرع القاهرة", "فرع القاهرة"],
+            }
+        )
+        st.download_button(
+            "تحميل نموذج ملف CSV",
+            data=template_df.to_csv(index=False).encode("utf-8-sig"),
+            file_name="smartaira_sales_template.csv",
+            mime="text/csv",
+            width="stretch",
+        )
         uploaded = st.file_uploader("ارفع ملف CSV بصيغة UTF-8 (حتى 5 ميجابايت)", type=["csv"])
         if uploaded is not None:
             try:
@@ -1218,7 +1247,7 @@ def main() -> None:
 
     if df_loaded is not None:
         st.divider()
-        st.subheader("٢. اختر طريقة التوقع")
+        st.subheader("٢. إعداد التوقع")
         cols = df_loaded.columns.tolist()
 
         default_date_idx = next((i for i, c in enumerate(cols) if "date" in c.lower()), 0)
@@ -1256,28 +1285,15 @@ def main() -> None:
     else:
         run_clicked = False
 
-    st.markdown(
-        """
-        <div class="privacy-box">
-            🔒 <b>بيئة عرض آمنة</b><br>
-            تعمل النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين ملفاتك بعد إغلاق الجلسة.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("مسح البيانات وتسجيل الخروج", width="stretch"):
-        for k, v in default_state.items():
-            st.session_state[k] = v
-        st.rerun()
-
-    active_step = 3 if st.session_state["forecast_result"] is not None else (2 if df_loaded is not None else 1)
-    step_labels = ["١. ملف المبيعات", "٢. إعداد التوقع", "٣. النتيجة"]
-    step_markup = "".join(
-        f'<div class="workflow-step {"active" if i + 1 == active_step else ""}">{label}</div>'
-        + ('<span class="workflow-line"></span>' if i < 2 else '')
-        for i, label in enumerate(step_labels)
-    )
-    st.markdown(f'<div class="workflow-steps">{step_markup}</div>', unsafe_allow_html=True)
+    with st.expander("الخصوصية وإدارة الجلسة", expanded=False):
+        st.markdown(
+            '<div class="privacy-box">🔒 تعمل النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين ملفاتك بعد إغلاق الجلسة.</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("مسح البيانات وتسجيل الخروج", width="stretch"):
+            for k, v in default_state.items():
+                st.session_state[k] = v
+            st.rerun()
 
     # Main Canvas: Status Strip & Validation
     if df_loaded is None:
@@ -1385,7 +1401,7 @@ def main() -> None:
     st.markdown(
         f"""
         <div class="exec-callout">
-            <b>ملخص المدير:</b> نتوقع {trend_word} المبيعات بنسبة <b>{abs(res['growth_pct']):.1f}%</b> خلال {res['horizon']} يوم.
+            <b>ملخص التوقع:</b> نتوقع {trend_word} المبيعات بنسبة <b>{abs(res['growth_pct']):.1f}%</b> خلال {res['horizon']} يوم.
             النطاق المتوقع من <b>{res['forecast_low_total']:,.0f}</b> إلى <b>{res['forecast_high_total']:,.0f}</b>.
             السيناريو المستخدم: <b>{res['scenario_name']}</b>.{target_message}
         </div>
@@ -1520,7 +1536,7 @@ def main() -> None:
             st.altair_chart(line_chart + rule_chart, width="stretch")
 
         with chart_col2:
-            st.subheader("🔍 ما العوامل التي تؤثر على التوقع؟")
+            st.subheader("🔍 ما العوامل الأكثر تأثيرًا على التوقع؟")
             driver_df: pd.DataFrame = res["driver_summary"]
             if driver_df.empty:
                 st.info("التوقع يعتمد على الاتجاه المعتاد للمبيعات.")
@@ -1748,7 +1764,7 @@ def main() -> None:
         f"""
         <div class="exec-callout">
             ✅ <b>اكتمل التحليل بنجاح:</b> تم بناء التوقعات اعتماداً على أنماط المبيعات التاريخية لـ
-            <b>{res['n_series']} سلسلة/فرع</b> بدقة تاريخية <b>{f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else "غير متاحة بعد"}</b>.
+            <b>{res['n_series']} سلسلة/فرع</b> ومؤشر أداء تاريخي <b>{f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else "غير متاح بعد"}</b>.
             راجع التنبيهات أولًا، ثم اعتمد الخطة أو حمّل ملف المبيعات المتوقع.
         </div>
         """,
@@ -1793,7 +1809,7 @@ def main() -> None:
         )
 
     st.markdown(
-        '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
+        f'<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026 &nbsp;•&nbsp; نسخة {build_id}</div>',
         unsafe_allow_html=True,
     )
 
