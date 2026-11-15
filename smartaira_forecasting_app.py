@@ -46,8 +46,14 @@ def render_build_id(build_id: str) -> None:
 BRAND_CSS = """
 <style>
     .stApp {
-        background-color: #F8FAFC;
+        background:
+            radial-gradient(circle at 18% 0%, rgba(255,255,255,0.96) 0 1px, transparent 2px) 0 0 / 7px 7px,
+            linear-gradient(135deg, #EEF2F6 0%, #E3E9F0 52%, #F5F7FA 100%);
         direction: rtl;
+    }
+    [data-testid="stMainBlockContainer"] {
+        max-width: 1120px;
+        padding-top: 1.25rem;
     }
     [data-testid="stSidebar"] {
         display: none;
@@ -95,6 +101,81 @@ BRAND_CSS = """
     }
     [data-testid="stDataFrame"] iframe {
         direction: rtl;
+    }
+    [data-testid="stMetric"],
+    [data-testid="stExpander"],
+    [data-testid="stFileUploader"] section,
+    [data-testid="stDataFrame"] {
+        background: linear-gradient(145deg, #FFFFFF, #E9EEF4);
+        border: 1px solid #D0D9E4;
+        border-radius: 14px;
+        box-shadow:
+            5px 5px 11px rgba(90, 109, 130, 0.16),
+            -4px -4px 10px rgba(255, 255, 255, 0.82);
+    }
+    [data-testid="stMetric"] {
+        padding: 0.8rem;
+    }
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    [data-testid="stFileUploader"] section {
+        background: #E9EEF4 !important;
+        border-color: #C6D1DD !important;
+        box-shadow:
+            inset 3px 3px 7px rgba(117, 133, 151, 0.18),
+            inset -3px -3px 7px rgba(255, 255, 255, 0.9) !important;
+    }
+    [data-testid="stButton"] > button,
+    [data-testid="stDownloadButton"] > button,
+    [data-testid="stFormSubmitButton"] > button {
+        min-height: 2.75rem;
+        border: 1px solid #BFCBDA;
+        border-radius: 12px;
+        background: linear-gradient(145deg, #FFFFFF, #DDE5EF);
+        color: #0F172A;
+        box-shadow:
+            4px 4px 0 #B8C3D0,
+            0 8px 16px rgba(62, 80, 102, 0.15),
+            inset 1px 1px 0 rgba(255, 255, 255, 0.95);
+        transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    [data-testid="stButton"] > button:active,
+    [data-testid="stDownloadButton"] > button:active,
+    [data-testid="stFormSubmitButton"] > button:active {
+        transform: translateY(3px);
+        box-shadow:
+            1px 1px 0 #B8C3D0,
+            0 3px 7px rgba(62, 80, 102, 0.16),
+            inset 2px 2px 5px rgba(80, 99, 120, 0.18);
+    }
+    [data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stDownloadButton"] > button[kind="primary"],
+    [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+        background: linear-gradient(145deg, #1CCB93, #07835F);
+        border-color: #056F51;
+        color: #FFFFFF;
+        box-shadow:
+            4px 4px 0 #056348,
+            0 9px 16px rgba(5, 99, 72, 0.22),
+            inset 1px 1px 0 rgba(255, 255, 255, 0.28);
+    }
+    [data-baseweb="tab-list"] {
+        gap: 0.45rem;
+        border-bottom: 0;
+    }
+    [data-baseweb="tab"] {
+        background: linear-gradient(145deg, #FFFFFF, #DCE5EF);
+        border: 1px solid #C7D2DF;
+        border-radius: 10px 10px 7px 7px;
+        box-shadow: 3px 3px 7px rgba(92, 109, 128, 0.15), -2px -2px 6px rgba(255,255,255,0.8);
+        padding: 0.55rem 0.8rem;
+    }
+    [data-baseweb="tab"][aria-selected="true"] {
+        background: #E8F8F2;
+        color: #065F46;
+        box-shadow: inset 2px 2px 5px rgba(5, 111, 81, 0.16), inset -2px -2px 5px rgba(255,255,255,0.9);
     }
     @media (max-width: 640px) {
         [data-testid="stMainBlockContainer"] {
@@ -155,14 +236,17 @@ BRAND_CSS = """
         }
     }
     .login-card {
-        background: #FFFFFF;
-        border: 1px solid #CBD5E1;
+        background: linear-gradient(145deg, #FFFFFF, #E7EDF4);
+        border: 1px solid #C8D3DF;
         border-top: 5px solid #10B981;
-        border-radius: 14px;
+        border-radius: 18px;
         padding: 1.5rem;
         max-width: 560px;
         margin: 1rem auto 1.5rem;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+        box-shadow:
+            8px 8px 18px rgba(79, 96, 117, 0.18),
+            -7px -7px 18px rgba(255, 255, 255, 0.88),
+            inset 1px 1px 0 rgba(255,255,255,0.9);
         direction: rtl;
         text-align: right;
     }
@@ -172,9 +256,10 @@ BRAND_CSS = """
         gap: 0.45rem;
         margin: 0.85rem 0 1rem;
         padding: 0.65rem 0.8rem;
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
+        background: #E5EBF2;
+        border: 1px solid #C9D4E0;
+        border-radius: 14px;
+        box-shadow: inset 3px 3px 7px rgba(112, 130, 151, 0.14), inset -3px -3px 7px rgba(255,255,255,0.85);
         direction: rtl;
     }
     .workflow-step {
@@ -183,12 +268,13 @@ BRAND_CSS = """
         color: #64748B;
         text-align: center;
         font-size: 0.78rem;
-        border-radius: 7px;
+        border-radius: 9px;
     }
     .workflow-step.active {
         color: #065F46;
-        background: #ECFDF5;
+        background: linear-gradient(145deg, #F4FFFB, #CFF4E4);
         font-weight: 700;
+        box-shadow: 2px 2px 5px rgba(5,111,81,0.17), -1px -1px 4px rgba(255,255,255,0.9);
     }
     .workflow-line {
         flex: 0 0 18px;
@@ -196,19 +282,25 @@ BRAND_CSS = """
         background: #CBD5E1;
     }
     .smartaira-hero {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        background:
+            linear-gradient(135deg, rgba(255,255,255,0.07), transparent 42%),
+            linear-gradient(135deg, #0B1323 0%, #24344B 100%);
         color: #FFFFFF;
         padding: 1.1rem 1.4rem;
-        border-radius: 14px;
-        border-left: 6px solid #10B981;
+        border-radius: 18px;
+        border-right: 6px solid #10B981;
         margin-bottom: 1.25rem;
-        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+        box-shadow:
+            8px 8px 18px rgba(15, 23, 42, 0.25),
+            -2px -2px 8px rgba(255,255,255,0.24),
+            inset 1px 1px 0 rgba(255,255,255,0.15),
+            inset -2px -2px 8px rgba(0,0,0,0.18);
     }
     .smartaira-badge {
         display: inline-block;
-        background-color: rgba(16, 185, 129, 0.18);
-        color: #34D399;
-        border: 1px solid rgba(16, 185, 129, 0.45);
+        background: linear-gradient(145deg, rgba(33, 206, 153, 0.26), rgba(1, 97, 73, 0.38));
+        color: #A7F3D0;
+        border: 1px solid rgba(167, 243, 208, 0.35);
         padding: 0.22rem 0.75rem;
         border-radius: 999px;
         font-size: 0.78rem;
@@ -239,13 +331,13 @@ BRAND_CSS = """
         margin: 0;
     }
     .value-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
+        background: linear-gradient(145deg, #FFFFFF, #E6ECF3);
+        border: 1px solid #CBD6E2;
         border-top: 4px solid #10B981;
-        border-radius: 12px;
+        border-radius: 15px;
         padding: 1.15rem 1.25rem;
         height: 100%;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        box-shadow: 5px 5px 12px rgba(84, 102, 123, 0.15), -4px -4px 10px rgba(255,255,255,0.85);
         direction: rtl;
         text-align: right;
     }
@@ -268,9 +360,9 @@ BRAND_CSS = """
         margin: 0;
     }
     .status-strip {
-        background-color: #FFFFFF;
-        border: 1px solid #CBD5E1;
-        border-radius: 10px;
+        background: linear-gradient(145deg, #FDFEFF, #E6EDF4);
+        border: 1px solid #C8D4E0;
+        border-radius: 13px;
         padding: 0.7rem 1rem;
         margin: 1rem 0;
         display: flex;
@@ -278,14 +370,16 @@ BRAND_CSS = """
         align-items: center;
         font-size: 0.88rem;
         color: #0F172A;
+        box-shadow: 4px 4px 9px rgba(93,109,129,0.12), -3px -3px 7px rgba(255,255,255,0.8);
     }
     .status-pill-active {
-        background-color: #ECFDF5;
+        background: linear-gradient(145deg, #F2FFFA, #CFF4E3);
         color: #065F46;
-        border: 1px solid #10B981;
+        border: 1px solid #77D9B5;
         padding: 0.22rem 0.7rem;
         border-radius: 999px;
         font-weight: 600;
+        box-shadow: inset 1px 1px 3px rgba(255,255,255,0.9), 1px 1px 3px rgba(5,111,81,0.13);
     }
     .hint-box {
         background-color: #ECFDF5;
@@ -298,28 +392,30 @@ BRAND_CSS = """
         margin-top: 0.5rem;
     }
     .privacy-box {
-        background-color: #0F172A;
+        background: linear-gradient(145deg, #22324A, #0D1729);
         color: #E2E8F0;
         padding: 0.85rem;
         border-radius: 10px;
         font-size: 0.82rem;
         line-height: 1.55;
-        border-left: 4px solid #10B981;
+        border-right: 4px solid #10B981;
+        box-shadow: 5px 5px 11px rgba(15,23,42,0.23), inset 1px 1px 0 rgba(255,255,255,0.12);
         direction: rtl;
         text-align: right;
     }
     .exec-callout {
-        background-color: #ECFDF5;
-        border: 1px solid #10B981;
+        background: linear-gradient(145deg, #F4FFFB, #D8F6E9);
+        border: 1px solid #83DCBA;
         border-right: 5px solid #10B981;
         color: #064E3B;
         padding: 0.9rem 1.15rem;
-        border-radius: 10px;
+        border-radius: 14px;
         margin-bottom: 1rem;
         font-size: 0.94rem;
         line-height: 1.6;
         direction: rtl;
         text-align: right;
+        box-shadow: 4px 4px 10px rgba(5,111,81,0.13), -3px -3px 8px rgba(255,255,255,0.85), inset 1px 1px 0 rgba(255,255,255,0.9);
     }
     .brand-footer {
         text-align: center;
