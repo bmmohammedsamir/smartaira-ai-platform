@@ -2,6 +2,7 @@ from datetime import datetime
 import io
 import os
 import re
+import subprocess
 from typing import Optional
 
 import altair as alt
@@ -12,6 +13,31 @@ import plotly.graph_objects as go
 import shap
 from sklearn.metrics import mean_absolute_percentage_error
 import streamlit as st
+
+
+BUILD_ID_FALLBACK = "2e6ef18"
+
+
+def get_build_id() -> str:
+    """Return the deployed commit ID when the host exposes Git metadata."""
+    for env_name in ("STREAMLIT_COMMIT_ID", "GIT_COMMIT", "COMMIT_SHA"):
+        value = os.getenv(env_name, "").strip()
+        if value:
+            return value[:12]
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        ).strip() or BUILD_ID_FALLBACK
+    except (OSError, subprocess.SubprocessError):
+        return BUILD_ID_FALLBACK
+
+
+def render_build_id(build_id: str) -> None:
+    """Show a compact build marker for deployment verification."""
+    st.caption(f"نسخة التطبيق: {build_id}")
 
 
 # -----------------------------------------------------------------------------
@@ -1089,6 +1115,7 @@ def main() -> None:
     )
     st.markdown(NO_CACHE_META, unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
+    build_id = get_build_id()
 
     default_state = {
         "authenticated": False,
@@ -1107,6 +1134,7 @@ def main() -> None:
             st.session_state[k] = v
 
     if not st.session_state["authenticated"]:
+        render_build_id(build_id)
         st.markdown(
             """
             <style>
@@ -1148,6 +1176,9 @@ def main() -> None:
         else:
             st.info("بيانات الدخول التجريبية: smartaira / smartaira — للعرض فقط")
         st.stop()
+
+    if st.session_state["forecast_result"] is None:
+        render_build_id(build_id)
 
     # Compact product header and visible workflow progress.
     st.markdown(
@@ -1440,6 +1471,7 @@ def main() -> None:
     # TAB 1: 2D Interactive Charts & Executive Gauge
     # -------------------------------------------------------------------------
     with tab_charts:
+        render_build_id(build_id)
         chart_col1, chart_col2 = st.columns([1.45, 1.0], gap="large")
 
         with chart_col1:
@@ -1586,6 +1618,7 @@ def main() -> None:
     # TAB 2: Interactive 3D Multi-Branch Demand Terrain
     # -------------------------------------------------------------------------
     with tab_3d:
+        render_build_id(build_id)
         st.subheader("🌐 تفاصيل الطلب حسب الفروع")
         st.caption(
             "شاشة تفصيلية اختيارية لرؤية الأيام الأعلى طلباً حسب الفروع والسيناريوهات."
@@ -1596,6 +1629,7 @@ def main() -> None:
     # TAB 3: Decision-first summary, alerts, and export
     # -------------------------------------------------------------------------
     with tab_decision:
+        render_build_id(build_id)
         st.subheader("✅ ماذا نفعل الآن؟")
         st.caption("ابدأ بالفروع التي تحتاج متابعة، ثم افتح التفاصيل عند الحاجة.")
 
