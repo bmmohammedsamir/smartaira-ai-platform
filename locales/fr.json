@@ -1,0 +1,248 @@
+{
+  "app": {
+    "page_title": "Plateforme Smartaira de prévision des ventes",
+    "build": "Version de l’application : {build_id}",
+    "footer": "Plateforme Smartaira • Des décisions commerciales plus claires • © 2026"
+  },
+  "language": {
+    "selector": "Langue",
+    "results_reset": "La langue a changé. Relancez la prévision pour afficher les résultats dans la langue sélectionnée."
+  },
+  "design": {
+    "selector": "Style de l’interface",
+    "help": "Vous pouvez modifier l’apparence à tout moment sans affecter vos données ni vos prévisions.",
+    "neumorphism": "Neumorphisme doux",
+    "classic": "Exécutif classique",
+    "warm": "Papier chaleureux"
+  },
+  "auth": {
+    "title": "Connexion à Smartaira",
+    "subtitle": "Utilisez vos identifiants pour accéder à l’espace de prévision des ventes.",
+    "username": "Nom d’utilisateur",
+    "password": "Mot de passe",
+    "sign_in": "Se connecter",
+    "invalid": "Le nom d’utilisateur ou le mot de passe est incorrect. Essayez smartaira dans les deux champs.",
+    "configured_info": "Utilisez les identifiants fournis par l’administrateur de la plateforme.",
+    "demo_info": "Identifiants de démonstration : smartaira / smartaira — uniquement pour la démo"
+  },
+  "header": {
+    "badge": "Smartaira • Prévision des ventes",
+    "title": "Prévoyez vos ventes en quelques minutes",
+    "subtitle": "Importez un fichier CSV ou commencez avec des données d’exemple"
+  },
+  "workflow": {
+    "data": "1. Données",
+    "setup": "2. Paramètres",
+    "result": "3. Résultats"
+  },
+  "data": {
+    "heading": "1. Choisir les données de vente",
+    "source": "Source des données",
+    "sample_mode": "Essayer des données d’exemple",
+    "upload_mode": "Importer un fichier de ventes",
+    "sample_button": "Utiliser les données d’exemple ({rows} lignes)",
+    "template_download": "Télécharger le modèle CSV",
+    "upload_label": "Importer un fichier CSV UTF-8 (jusqu’à 5 Mo)",
+    "upload_error": "Impossible de lire le fichier CSV : {error}",
+    "empty_status": "Données : aucun fichier sélectionné",
+    "waiting_file": "1. En attente du fichier de ventes",
+    "start_info": "Choisissez **Utiliser les données d’exemple** ou importez un **fichier de ventes** depuis cette page pour commencer.",
+    "file_status": "Fichier : {file_name} | Lignes : {rows:,} | Période : {date_span}",
+    "preview": "Aperçu des données de vente — 5 premières lignes"
+  },
+  "settings": {
+    "heading": "2. Configurer la prévision",
+    "date_column": "Colonne de date",
+    "target_column": "Colonne des ventes ou de valeur",
+    "group_column": "Répartir par agence ou article (facultatif)",
+    "no_group": "Sans répartition (total entreprise)",
+    "horizon": "Périodes à venir",
+    "horizon_option": "{days} jours",
+    "improve": "Ajuster la prévision selon votre plan (facultatif)",
+    "scenario": "Choisir un scénario",
+    "promo": "Une promotion ou une campagne est prévue sur la période à venir",
+    "discount": "Remise prévue (%)",
+    "price_change": "Évolution prévue du prix (%)",
+    "sales_target": "Objectif de ventes pour la période à venir (facultatif)",
+    "run": "Créer la prévision des ventes",
+    "review_columns": "Vérifiez les colonnes sélectionnées ci-dessus, puis choisissez **Créer la prévision des ventes**."
+  },
+  "scenario": {
+    "baseline": "Scénario de base",
+    "optimistic": "Croissance optimiste (+10%)",
+    "cautious": "Scénario prudent (-10%)"
+  },
+  "privacy": {
+    "title": "Confidentialité et gestion de session",
+    "body": "La démonstration utilise uniquement une mémoire temporaire. Vos fichiers ne sont pas conservés après la fin de la session.",
+    "clear_logout": "Effacer les données et se déconnecter"
+  },
+  "validation": {
+    "empty_file": "Fichier non valide : le CSV importé est vide.",
+    "max_rows": "Fichier non valide : il contient {rows:,} lignes. La limite d’import est de 10 000 lignes.",
+    "same_columns": "Erreur de colonnes : choisissez des colonnes différentes pour la date et la valeur des ventes.",
+    "invalid_group": "Erreur de colonnes : la colonne de regroupement doit être différente des colonnes de date et de valeur.",
+    "invalid_date": "Date non valide dans la colonne '{date_col}' (par exemple, ligne {row}). Utilisez jour/mois/année ou année-mois-jour et vérifiez qu’aucune date n’est vide.",
+    "invalid_value": "La colonne de valeur '{target_col}' contient du texte non numérique (par exemple, '{value}' à la ligne {row}). Supprimez les symboles monétaires et erreurs Excel avant l’import.",
+    "insufficient_rows": "Données historiques insuffisantes : {rows} lignes trouvées. Au moins 30 lignes sont nécessaires pour détecter une tendance de ventes.",
+    "constant_values": "Prévision impossible : toutes les valeurs historiques de '{target_col}' sont identiques. Vérifiez la colonne de valeur.",
+    "insufficient_group_rows": "Données insuffisantes : chaque agence ou groupe doit compter au moins 15 lignes historiques.",
+    "verified": "Validé"
+  },
+  "granularity": {
+    "daily": "quotidiennes",
+    "weekly": "hebdomadaires",
+    "monthly": "mensuelles"
+  },
+  "common": {
+    "not_available": "Indisponible",
+    "not_available_yet": "Pas encore disponible",
+    "unspecified": "Non précisé",
+    "series": "Série",
+    "company_total": "Total entreprise",
+    "all_groups": "Toutes les agences et tous les groupes",
+    "historical": "Données historiques",
+    "forecast": "Prévision à venir"
+  },
+  "spinner": {
+    "forecasting": "Analyse des données et calcul des facteurs influençant les ventes..."
+  },
+  "status": {
+    "ready": "3. Prévision prête",
+    "validated": "2. Données vérifiées ({granularity} • {series_count} séries)",
+    "excluded": "{count} agence/groupe sans ventes récentes a été exclu de la prévision : {groups}."
+  },
+  "result": {
+    "increase": "une hausse de",
+    "decrease": "une baisse de",
+    "target_above": "L’objectif dépasse la prévision de {gap:,.0f}.",
+    "forecast_above": "La prévision dépasse l’objectif de {gap:,.0f}.",
+    "summary": "Synthèse de la prévision : nous prévoyons {trend} des ventes de {growth:.1f}% au cours des {horizon} prochains jours. La fourchette attendue va de {low:,.0f} à {high:,.0f}. Scénario utilisé : {scenario}.{target_message}",
+    "completed": "Analyse terminée : les prévisions ont été créées à partir des tendances historiques pour {series_count} séries/agences avec un indicateur de performance historique de {accuracy}. Consultez d’abord les alertes, puis approuvez le plan ou téléchargez le fichier."
+  },
+  "kpi": {
+    "total_forecast": "Prévision totale pour {horizon} jours",
+    "vs_previous": "{growth:+.1f}% par rapport à la période précédente",
+    "forecast_accuracy": "Précision de la prévision",
+    "error_rate": "Taux d’erreur : {error:.1f}%",
+    "not_enough_data": "Données de test insuffisantes",
+    "forecast_scope": "Périmètre de prévision",
+    "active_series": "{count} séries actives",
+    "granularity_data": "Données {granularity}",
+    "top_driver": "Facteur principal",
+    "largest_impact": "Impact maximal sur la prévision"
+  },
+  "tabs": {
+    "decision": "Décisions et alertes",
+    "charts": "Tendances et facteurs",
+    "branches": "Détails des agences"
+  },
+  "charts": {
+    "history_forecast": "Ventes passées et prévisions à venir",
+    "filter_series": "Filtrer le graphique par agence ou groupe",
+    "history_legend": "Ventes passées",
+    "forecast_legend": "Prévision Smartaira",
+    "date": "Date",
+    "sales_value": "Valeur des ventes",
+    "type": "Type",
+    "sales": "Ventes",
+    "drivers": "Quels facteurs influencent le plus la prévision ?",
+    "usual_trend": "La prévision suit la tendance habituelle des ventes.",
+    "average_impact": "Impact moyen sur les ventes",
+    "positive_impact": "Impact positif (+)",
+    "negative_impact": "Impact négatif (-)",
+    "impact": "Impact sur les ventes",
+    "by_group": "Prévision totale par agence ou groupe",
+    "total_forecast_sales": "Ventes totales prévues",
+    "change": "Taux d’évolution",
+    "accuracy": "À quel point la prévision est-elle proche ?",
+    "accuracy_gauge_delta": "% par rapport à un objectif de 85%",
+    "accuracy_gauge_title": "Précision de la prévision précédente (taux d’erreur : {error:.1f}%)",
+    "not_enough_accuracy": "Les données historiques ne suffisent pas encore pour mesurer la précision. La prévision reste disponible avec une fourchette prudente.",
+    "branch_details": "Détails de la demande par agence",
+    "branch_details_caption": "Vue détaillée facultative des jours de demande les plus élevés, par agence et scénario.",
+    "scenario_range": "Plage de scénarios",
+    "cautious": "Prudent (-6%)",
+    "smartaira_forecast": "Prévision Smartaira",
+    "optimistic": "Optimiste (+6%)",
+    "forecast_date": "Date de prévision",
+    "forecast_sales": "Ventes prévues",
+    "hover_date": "Date :",
+    "hover_forecast": "Prévision :"
+  },
+  "decision": {
+    "title": "Que devons-nous faire maintenant ?",
+    "caption": "Commencez par les agences qui demandent une attention, puis ouvrez les détails si nécessaire.",
+    "alerts": "Alertes à traiter",
+    "alert_item": "{change_word} {change_pct:.1f}% • Prévision : {forecast:,.0f} • Action : {action}",
+    "accuracy_details": "Indicateurs de précision en langage clair",
+    "accuracy_close": "À quel point la prévision est-elle proche ?",
+    "total_error": "Erreur sur le total des ventes",
+    "bias": "Prévision trop haute ou trop basse ?",
+    "baseline_comparison": "Comparaison avec une méthode simple",
+    "accuracy_caption": "Plus le chiffre est bas, mieux c’est. Un signe positif indique que la prévision était au-dessus des ventes réelles lors du test précédent.",
+    "group_summary": "Synthèse par agence ou groupe",
+    "group_accuracy": "Précision du suivi par agence ou groupe",
+    "compare_previous": "Comparer les prévisions précédentes",
+    "download_history": "Télécharger l’historique de comparaison",
+    "details_export": "Détails et export"
+  },
+  "table": {
+    "previous_sales": "Ventes précédentes sur {horizon} jours",
+    "forecast_sales": "Prévision pour les {horizon} prochains jours",
+    "daily_forecast": "Prévision quotidienne moyenne",
+    "forecast_low": "Minimum attendu",
+    "forecast_high": "Maximum attendu",
+    "recommended_action": "Action recommandée",
+    "peak_day": "Jour le plus attendu",
+    "historical_error": "Taux d’erreur historique",
+    "total_error": "Erreur sur le total des ventes",
+    "average_error": "Erreur moyenne",
+    "bias": "Biais",
+    "details_title": "Plan de prévision détaillé",
+    "display": "Afficher les données",
+    "future_only": "Prévisions à venir uniquement",
+    "all_rows": "Toutes les données passées et à venir",
+    "filter_group": "Filtrer le tableau par agence ou groupe",
+    "actual_sales": "Ventes réelles",
+    "predicted_sales": "Ventes prévues",
+    "row_type": "Type de ligne",
+    "top_drivers": "Principaux facteurs de vente",
+    "model_error": "Taux d’erreur de prévision",
+    "approval_status": "Statut d’approbation"
+  },
+  "actions": {
+    "increase_stock": "Renforcer le suivi et le stock",
+    "review_activation": "Analyser la cause et préparer une action de relance",
+    "continue_monitoring": "Poursuivre le suivi"
+  },
+  "drivers": {
+    "weekend": "Week-end (vendredi et samedi)",
+    "payday": "Fin de mois et période de paie",
+    "day_of_week": "Jour de la semaine",
+    "month_seasonality": "Saisonnalité mensuelle",
+    "day_of_month": "Jour du mois",
+    "week_of_year": "Semaine de l’année",
+    "yearly_trend": "Tendance annuelle",
+    "base_trend": "Tendance de base",
+    "historical_trend": "Tendance historique",
+    "actual_history": "Données historiques réelles"
+  },
+  "governance": {
+    "comment": "Commentaire du responsable avant approbation (facultatif)",
+    "comment_placeholder": "Exemple : approuvé avec un stock plus élevé pour l’agence Nasr City.",
+    "approved_by": "Prévision approuvée par {user} ({timestamp})",
+    "approval_note": "Note d’approbation : {comment}",
+    "approval_hint": "L’approbation fait de ce plan la référence actuelle de l’équipe commerciale.",
+    "approve": "Approuver le plan de prévision"
+  },
+  "approval": {
+    "pending": "En attente d’approbation",
+    "approved": "Approuvé"
+  },
+  "export": {
+    "full_forecast": "Télécharger le fichier de prévision complet",
+    "history_file": "smartaira_forecast_history.csv",
+    "forecast_file": "smartaira_forecast_{date}.csv"
+  }
+}

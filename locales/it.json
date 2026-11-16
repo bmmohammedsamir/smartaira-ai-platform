@@ -1,0 +1,248 @@
+{
+  "app": {
+    "page_title": "Piattaforma Smartaira per le previsioni di vendita",
+    "build": "Versione dell’app: {build_id}",
+    "footer": "Piattaforma Smartaira • Decisioni di vendita più chiare • © 2026"
+  },
+  "language": {
+    "selector": "Lingua",
+    "results_reset": "La lingua è cambiata. Esegui di nuovo la previsione per vedere i risultati nella lingua selezionata."
+  },
+  "design": {
+    "selector": "Stile dell’interfaccia",
+    "help": "Puoi cambiare l’aspetto in qualsiasi momento senza modificare dati o previsioni.",
+    "neumorphism": "Neumorfismo morbido",
+    "classic": "Executive classico",
+    "warm": "Carta calda"
+  },
+  "auth": {
+    "title": "Accedi a Smartaira",
+    "subtitle": "Usa le tue credenziali per accedere all’area di previsione delle vendite.",
+    "username": "Nome utente",
+    "password": "Password",
+    "sign_in": "Accedi",
+    "invalid": "Nome utente o password non corretti. Prova smartaira in entrambi i campi.",
+    "configured_info": "Usa le credenziali fornite dall’amministratore della piattaforma.",
+    "demo_info": "Credenziali demo: smartaira / smartaira — solo per dimostrazione"
+  },
+  "header": {
+    "badge": "Smartaira • Previsioni di vendita",
+    "title": "Prevedi le tue vendite in pochi minuti",
+    "subtitle": "Carica un file CSV o inizia con dati di esempio"
+  },
+  "workflow": {
+    "data": "1. Dati",
+    "setup": "2. Configurazione",
+    "result": "3. Risultati"
+  },
+  "data": {
+    "heading": "1. Scegli i dati di vendita",
+    "source": "Origine dati",
+    "sample_mode": "Prova dati di esempio",
+    "upload_mode": "Carica file vendite",
+    "sample_button": "Usa dati di esempio ({rows} righe)",
+    "template_download": "Scarica modello CSV",
+    "upload_label": "Carica un file CSV UTF-8 (fino a 5 MB)",
+    "upload_error": "Impossibile leggere il file CSV: {error}",
+    "empty_status": "Dati: nessun file selezionato",
+    "waiting_file": "1. In attesa del file vendite",
+    "start_info": "Scegli **Usa dati di esempio** oppure carica un **file vendite** da questa pagina per iniziare.",
+    "file_status": "File: {file_name} | Righe: {rows:,} | Periodo: {date_span}",
+    "preview": "Anteprima dati di vendita — prime 5 righe"
+  },
+  "settings": {
+    "heading": "2. Configura la previsione",
+    "date_column": "Colonna data",
+    "target_column": "Colonna vendite o valore",
+    "group_column": "Suddividi per filiale o articolo (facoltativo)",
+    "no_group": "Nessuna suddivisione (totale azienda)",
+    "horizon": "Periodi futuri",
+    "horizon_option": "{days} giorni",
+    "improve": "Adatta la previsione al tuo piano (facoltativo)",
+    "scenario": "Scegli uno scenario",
+    "promo": "È prevista una promozione o campagna nel prossimo periodo",
+    "discount": "Sconto previsto (%)",
+    "price_change": "Variazione di prezzo prevista (%)",
+    "sales_target": "Obiettivo di vendita per il prossimo periodo (facoltativo)",
+    "run": "Crea previsione vendite",
+    "review_columns": "Verifica le colonne selezionate sopra, quindi scegli **Crea previsione vendite**."
+  },
+  "scenario": {
+    "baseline": "Scenario base",
+    "optimistic": "Crescita ottimistica (+10%)",
+    "cautious": "Scenario prudente (-10%)"
+  },
+  "privacy": {
+    "title": "Privacy e gestione sessione",
+    "body": "La demo usa solo memoria temporanea. I file non vengono archiviati al termine della sessione.",
+    "clear_logout": "Cancella dati ed esci"
+  },
+  "validation": {
+    "empty_file": "File non valido: il CSV caricato è vuoto.",
+    "max_rows": "File non valido: contiene {rows:,} righe. Il limite di caricamento è 10.000 righe.",
+    "same_columns": "Errore di colonne: scegli colonne diverse per data e valore delle vendite.",
+    "invalid_group": "Errore di colonne: la colonna di raggruppamento deve essere diversa dalle colonne di data e valore.",
+    "invalid_date": "Data non valida nella colonna '{date_col}' (ad esempio riga {row}). Usa giorno/mese/anno oppure anno-mese-giorno e verifica che non vi siano date vuote.",
+    "invalid_value": "La colonna valore '{target_col}' contiene testo non numerico (ad esempio '{value}' alla riga {row}). Rimuovi simboli di valuta ed errori Excel prima del caricamento.",
+    "insufficient_rows": "Dati storici insufficienti: trovate {rows} righe. Servono almeno 30 righe per rilevare un andamento delle vendite.",
+    "constant_values": "Impossibile creare la previsione: tutti i valori storici in '{target_col}' sono identici. Controlla la colonna valore.",
+    "insufficient_group_rows": "Dati insufficienti: ogni filiale o gruppo deve avere almeno 15 righe storiche.",
+    "verified": "Verificato"
+  },
+  "granularity": {
+    "daily": "giornalieri",
+    "weekly": "settimanali",
+    "monthly": "mensili"
+  },
+  "common": {
+    "not_available": "Non disponibile",
+    "not_available_yet": "Non ancora disponibile",
+    "unspecified": "Non specificato",
+    "series": "Serie",
+    "company_total": "Totale azienda",
+    "all_groups": "Tutte le filiali e i gruppi",
+    "historical": "Dati storici",
+    "forecast": "Previsione futura"
+  },
+  "spinner": {
+    "forecasting": "Analisi dei dati e calcolo dei fattori che influenzano le vendite..."
+  },
+  "status": {
+    "ready": "3. Previsione pronta",
+    "validated": "2. Dati verificati ({granularity} • {series_count} serie)",
+    "excluded": "{count} filiale/gruppo senza vendite recenti è stato escluso dalla previsione: {groups}."
+  },
+  "result": {
+    "increase": "un aumento delle",
+    "decrease": "una diminuzione delle",
+    "target_above": "L’obiettivo supera la previsione di {gap:,.0f}.",
+    "forecast_above": "La previsione supera l’obiettivo di {gap:,.0f}.",
+    "summary": "Riepilogo previsione: prevediamo {trend} vendite del {growth:.1f}% nei prossimi {horizon} giorni. L’intervallo atteso va da {low:,.0f} a {high:,.0f}. Scenario utilizzato: {scenario}.{target_message}",
+    "completed": "Analisi completata: le previsioni sono state create dai modelli storici di vendita per {series_count} serie/filiali, con un indicatore di rendimento storico pari a {accuracy}. Controlla prima gli avvisi, poi approva il piano o scarica il file."
+  },
+  "kpi": {
+    "total_forecast": "Previsione totale per {horizon} giorni",
+    "vs_previous": "{growth:+.1f}% rispetto al periodo precedente",
+    "forecast_accuracy": "Accuratezza previsione",
+    "error_rate": "Tasso di errore: {error:.1f}%",
+    "not_enough_data": "Dati di test insufficienti",
+    "forecast_scope": "Ambito della previsione",
+    "active_series": "{count} serie attive",
+    "granularity_data": "Dati {granularity}",
+    "top_driver": "Fattore principale",
+    "largest_impact": "Maggiore impatto sulla previsione"
+  },
+  "tabs": {
+    "decision": "Decisioni e avvisi",
+    "charts": "Tendenze e fattori",
+    "branches": "Dettagli filiali"
+  },
+  "charts": {
+    "history_forecast": "Vendite passate e previsione futura",
+    "filter_series": "Filtra il grafico per filiale o gruppo",
+    "history_legend": "Vendite passate",
+    "forecast_legend": "Previsione Smartaira",
+    "date": "Data",
+    "sales_value": "Valore vendite",
+    "type": "Tipo",
+    "sales": "Vendite",
+    "drivers": "Quali fattori incidono maggiormente sulla previsione?",
+    "usual_trend": "La previsione segue il consueto andamento delle vendite.",
+    "average_impact": "Impatto medio sulle vendite",
+    "positive_impact": "Impatto positivo (+)",
+    "negative_impact": "Impatto negativo (-)",
+    "impact": "Impatto sulle vendite",
+    "by_group": "Previsione totale per filiale o gruppo",
+    "total_forecast_sales": "Vendite totali previste",
+    "change": "Tasso di variazione",
+    "accuracy": "Quanto è vicina la previsione?",
+    "accuracy_gauge_delta": "% rispetto a un obiettivo dell’85%",
+    "accuracy_gauge_title": "Accuratezza previsione precedente (tasso di errore: {error:.1f}%)",
+    "not_enough_accuracy": "Non ci sono ancora dati storici sufficienti per misurare l’accuratezza. La previsione resta disponibile con un intervallo prudente.",
+    "branch_details": "Dettagli della domanda per filiale",
+    "branch_details_caption": "Vista dettagliata facoltativa dei giorni di maggiore domanda per filiale e scenario.",
+    "scenario_range": "Intervallo scenari",
+    "cautious": "Prudente (-6%)",
+    "smartaira_forecast": "Previsione Smartaira",
+    "optimistic": "Ottimista (+6%)",
+    "forecast_date": "Data previsione",
+    "forecast_sales": "Vendite previste",
+    "hover_date": "Data:",
+    "hover_forecast": "Previsione:"
+  },
+  "decision": {
+    "title": "Cosa dobbiamo fare ora?",
+    "caption": "Inizia dalle filiali che richiedono attenzione, poi apri i dettagli quando necessario.",
+    "alerts": "Avvisi che richiedono attenzione",
+    "alert_item": "{change_word} {change_pct:.1f}% • Previsione: {forecast:,.0f} • Azione: {action}",
+    "accuracy_details": "Indicatori di accuratezza in linguaggio semplice",
+    "accuracy_close": "Quanto è vicina la previsione?",
+    "total_error": "Errore sulle vendite totali",
+    "bias": "Stiamo sovrastimando o sottostimando?",
+    "baseline_comparison": "Confronto con un metodo semplice",
+    "accuracy_caption": "Più basso è il valore, meglio è. Un segno positivo indica che la previsione era superiore alle vendite effettive nel test precedente.",
+    "group_summary": "Riepilogo per filiale o gruppo",
+    "group_accuracy": "Accuratezza di monitoraggio per filiale o gruppo",
+    "compare_previous": "Confronta previsioni precedenti",
+    "download_history": "Scarica cronologia confronto",
+    "details_export": "Dettagli ed esportazione"
+  },
+  "table": {
+    "previous_sales": "Vendite precedenti per {horizon} giorni",
+    "forecast_sales": "Previsione per i prossimi {horizon} giorni",
+    "daily_forecast": "Previsione giornaliera media",
+    "forecast_low": "Minimo previsto",
+    "forecast_high": "Massimo previsto",
+    "recommended_action": "Azione consigliata",
+    "peak_day": "Giorno di picco previsto",
+    "historical_error": "Tasso di errore storico",
+    "total_error": "Errore sulle vendite totali",
+    "average_error": "Errore medio",
+    "bias": "Bias",
+    "details_title": "Piano di previsione dettagliato",
+    "display": "Mostra dati",
+    "future_only": "Solo previsioni future",
+    "all_rows": "Tutti i dati passati e futuri",
+    "filter_group": "Filtra tabella per filiale o gruppo",
+    "actual_sales": "Vendite effettive",
+    "predicted_sales": "Vendite previste",
+    "row_type": "Tipo di riga",
+    "top_drivers": "Principali fattori di vendita",
+    "model_error": "Tasso di errore previsione",
+    "approval_status": "Stato approvazione"
+  },
+  "actions": {
+    "increase_stock": "Aumenta monitoraggio e scorte",
+    "review_activation": "Esamina la causa e pianifica il rilancio",
+    "continue_monitoring": "Continua il monitoraggio"
+  },
+  "drivers": {
+    "weekend": "Fine settimana (venerdì e sabato)",
+    "payday": "Fine mese e periodo di pagamento",
+    "day_of_week": "Giorno della settimana",
+    "month_seasonality": "Stagionalità mensile",
+    "day_of_month": "Giorno del mese",
+    "week_of_year": "Settimana dell’anno",
+    "yearly_trend": "Tendenza annuale",
+    "base_trend": "Tendenza di base",
+    "historical_trend": "Tendenza storica",
+    "actual_history": "Dati storici effettivi"
+  },
+  "governance": {
+    "comment": "Commento del responsabile prima dell’approvazione (facoltativo)",
+    "comment_placeholder": "Esempio: approvato con più scorte per la filiale Nasr City.",
+    "approved_by": "Previsione approvata da {user} ({timestamp})",
+    "approval_note": "Nota di approvazione: {comment}",
+    "approval_hint": "L’approvazione rende questo piano il riferimento corrente per il team vendite.",
+    "approve": "Approva piano di previsione"
+  },
+  "approval": {
+    "pending": "In attesa di approvazione",
+    "approved": "Approvato"
+  },
+  "export": {
+    "full_forecast": "Scarica file previsione completo",
+    "history_file": "smartaira_forecast_history.csv",
+    "forecast_file": "smartaira_forecast_{date}.csv"
+  }
+}

@@ -1,0 +1,248 @@
+{
+  "app": {
+    "page_title": "Smartaira Plattform für Verkaufsprognosen",
+    "build": "App-Version: {build_id}",
+    "footer": "Smartaira Plattform • Klarere Vertriebsentscheidungen • © 2026"
+  },
+  "language": {
+    "selector": "Sprache",
+    "results_reset": "Die Sprache wurde geändert. Führen Sie die Prognose erneut aus, um die Ergebnisse in der gewählten Sprache anzuzeigen."
+  },
+  "design": {
+    "selector": "Oberflächenstil",
+    "help": "Sie können das Erscheinungsbild jederzeit ändern, ohne Daten oder Prognose zu beeinflussen.",
+    "neumorphism": "Weicher Neumorphismus",
+    "classic": "Klassisch-geschäftlich",
+    "warm": "Warmes Papier"
+  },
+  "auth": {
+    "title": "Bei Smartaira anmelden",
+    "subtitle": "Melden Sie sich an, um den Bereich für Verkaufsprognosen zu öffnen.",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "sign_in": "Anmelden",
+    "invalid": "Benutzername oder Passwort ist falsch. Verwenden Sie in beiden Feldern smartaira.",
+    "configured_info": "Verwenden Sie die Zugangsdaten Ihres Plattformadministrators.",
+    "demo_info": "Demo-Zugangsdaten: smartaira / smartaira — nur zur Vorführung"
+  },
+  "header": {
+    "badge": "Smartaira • Verkaufsprognosen",
+    "title": "Prognostizieren Sie Ihre Verkäufe in Minuten",
+    "subtitle": "Laden Sie eine CSV-Datei hoch oder starten Sie mit Beispieldaten"
+  },
+  "workflow": {
+    "data": "1. Daten",
+    "setup": "2. Einrichtung",
+    "result": "3. Ergebnis"
+  },
+  "data": {
+    "heading": "1. Verkaufsdaten auswählen",
+    "source": "Datenquelle",
+    "sample_mode": "Beispieldaten testen",
+    "upload_mode": "Verkaufsdatei hochladen",
+    "sample_button": "Beispieldaten verwenden ({rows} Zeilen)",
+    "template_download": "CSV-Vorlage herunterladen",
+    "upload_label": "UTF-8-CSV-Datei hochladen (bis zu 5 MB)",
+    "upload_error": "CSV-Datei kann nicht gelesen werden: {error}",
+    "empty_status": "Daten: Noch keine Datei ausgewählt",
+    "waiting_file": "1. Verkaufsdatei wird erwartet",
+    "start_info": "Wählen Sie **Beispieldaten verwenden** oder laden Sie auf dieser Seite eine **Verkaufsdatei** hoch.",
+    "file_status": "Datei: {file_name} | Zeilen: {rows:,} | Zeitraum: {date_span}",
+    "preview": "Vorschau der Verkaufsdaten — erste 5 Zeilen"
+  },
+  "settings": {
+    "heading": "2. Prognose einrichten",
+    "date_column": "Datumsspalte",
+    "target_column": "Spalte für Umsatz oder Wert",
+    "group_column": "Nach Filiale oder Artikel aufschlüsseln (optional)",
+    "no_group": "Keine Aufschlüsselung (Unternehmen gesamt)",
+    "horizon": "Kommende Zeiträume",
+    "horizon_option": "{days} Tage",
+    "improve": "Prognose an Ihren Plan anpassen (optional)",
+    "scenario": "Szenario auswählen",
+    "promo": "Im kommenden Zeitraum ist eine Aktion oder Kampagne geplant",
+    "discount": "Erwarteter Rabatt (%)",
+    "price_change": "Erwartete Preisänderung (%)",
+    "sales_target": "Verkaufsziel für den kommenden Zeitraum (optional)",
+    "run": "Verkaufsprognose erstellen",
+    "review_columns": "Prüfen Sie die ausgewählten Spalten oben und wählen Sie dann **Verkaufsprognose erstellen**."
+  },
+  "scenario": {
+    "baseline": "Basisszenario",
+    "optimistic": "Optimistisches Wachstum (+10%)",
+    "cautious": "Vorsichtiges Szenario (-10%)"
+  },
+  "privacy": {
+    "title": "Datenschutz und Sitzungsverwaltung",
+    "body": "Die Demo arbeitet nur im temporären Speicher. Ihre Dateien werden nach Ende der Sitzung nicht gespeichert.",
+    "clear_logout": "Daten löschen und abmelden"
+  },
+  "validation": {
+    "empty_file": "Ungültige Datei: Die hochgeladene CSV-Datei ist leer.",
+    "max_rows": "Ungültige Datei: Sie enthält {rows:,} Zeilen. Das Upload-Limit beträgt 10.000 Zeilen.",
+    "same_columns": "Spaltenfehler: Wählen Sie unterschiedliche Spalten für Datum und Verkaufswert.",
+    "invalid_group": "Spaltenfehler: Die Gruppierungsspalte muss sich von Datums- und Wertespalte unterscheiden.",
+    "invalid_date": "Ungültiges Datum in Spalte '{date_col}' (zum Beispiel Zeile {row}). Verwenden Sie Tag/Monat/Jahr oder Jahr-Monat-Tag und prüfen Sie leere Datumswerte.",
+    "invalid_value": "Die Wertespalte '{target_col}' enthält nicht numerischen Text (zum Beispiel '{value}' in Zeile {row}). Entfernen Sie Währungssymbole und Excel-Fehler vor dem Upload.",
+    "insufficient_rows": "Zu wenige historische Daten: {rows} Zeilen gefunden. Mindestens 30 Zeilen sind nötig, um ein Verkaufsmuster zu erkennen.",
+    "constant_values": "Prognose kann nicht erstellt werden: Alle historischen Werte in '{target_col}' sind identisch. Prüfen Sie die Wertespalte.",
+    "insufficient_group_rows": "Zu wenige Daten: Jede Filiale oder Gruppe benötigt mindestens 15 historische Zeilen.",
+    "verified": "Geprüft"
+  },
+  "granularity": {
+    "daily": "tägliche",
+    "weekly": "wöchentliche",
+    "monthly": "monatliche"
+  },
+  "common": {
+    "not_available": "Nicht verfügbar",
+    "not_available_yet": "Noch nicht verfügbar",
+    "unspecified": "Nicht angegeben",
+    "series": "Reihe",
+    "company_total": "Unternehmen gesamt",
+    "all_groups": "Alle Filialen und Gruppen",
+    "historical": "Historische Daten",
+    "forecast": "Kommende Prognose"
+  },
+  "spinner": {
+    "forecasting": "Daten werden analysiert und Verkaufstreiber berechnet..."
+  },
+  "status": {
+    "ready": "3. Prognose bereit",
+    "validated": "2. Daten geprüft ({granularity} • {series_count} Reihen)",
+    "excluded": "{count} Filiale/Gruppe ohne aktuelle Verkäufe wurde aus der Prognose ausgeschlossen: {groups}."
+  },
+  "result": {
+    "increase": "einen Anstieg der",
+    "decrease": "einen Rückgang der",
+    "target_above": "Das Ziel liegt um {gap:,.0f} über der Prognose.",
+    "forecast_above": "Die Prognose liegt um {gap:,.0f} über dem Ziel.",
+    "summary": "Prognoseübersicht: Wir erwarten {trend} Verkäufe um {growth:.1f}% in den nächsten {horizon} Tagen. Der erwartete Bereich liegt zwischen {low:,.0f} und {high:,.0f}. Verwendetes Szenario: {scenario}.{target_message}",
+    "completed": "Analyse abgeschlossen: Die Prognosen wurden aus historischen Verkaufsmustern für {series_count} Reihen/Filialen mit einem historischen Leistungsindikator von {accuracy} erstellt. Prüfen Sie zuerst die Warnungen und genehmigen Sie dann den Plan oder laden Sie die Prognosedatei herunter."
+  },
+  "kpi": {
+    "total_forecast": "Gesamtprognose für {horizon} Tage",
+    "vs_previous": "{growth:+.1f}% gegenüber dem vorherigen Zeitraum",
+    "forecast_accuracy": "Prognosegenauigkeit",
+    "error_rate": "Fehlerquote: {error:.1f}%",
+    "not_enough_data": "Zu wenige Testdaten",
+    "forecast_scope": "Prognoseumfang",
+    "active_series": "{count} aktive Reihen",
+    "granularity_data": "{granularity} Daten",
+    "top_driver": "Wichtigster Treiber",
+    "largest_impact": "Größter Einfluss auf die Prognose"
+  },
+  "tabs": {
+    "decision": "Entscheidungen & Warnungen",
+    "charts": "Trends & Treiber",
+    "branches": "Filialdetails"
+  },
+  "charts": {
+    "history_forecast": "Vergangene Verkäufe und kommende Prognose",
+    "filter_series": "Diagramm nach Filiale oder Gruppe filtern",
+    "history_legend": "Vergangene Verkäufe",
+    "forecast_legend": "Smartaira-Prognose",
+    "date": "Datum",
+    "sales_value": "Verkaufswert",
+    "type": "Typ",
+    "sales": "Verkäufe",
+    "drivers": "Welche Faktoren beeinflussen die Prognose am stärksten?",
+    "usual_trend": "Die Prognose folgt dem üblichen Verkaufstrend.",
+    "average_impact": "Durchschnittlicher Verkaufseinfluss",
+    "positive_impact": "Positiver Einfluss (+)",
+    "negative_impact": "Negativer Einfluss (-)",
+    "impact": "Einfluss auf Verkäufe",
+    "by_group": "Gesamtprognose nach Filiale oder Gruppe",
+    "total_forecast_sales": "Prognostizierte Gesamtverkäufe",
+    "change": "Änderungsrate",
+    "accuracy": "Wie nah liegt die Prognose?",
+    "accuracy_gauge_delta": "% gegenüber einem Ziel von 85%",
+    "accuracy_gauge_title": "Genauigkeit der vorherigen Prognose (Fehlerquote: {error:.1f}%)",
+    "not_enough_accuracy": "Es gibt noch nicht genügend historische Daten, um die Genauigkeit zu messen. Die Prognose bleibt mit einem vorsichtigen Bereich verfügbar.",
+    "branch_details": "Nachfragedetails nach Filiale",
+    "branch_details_caption": "Optionale Detailansicht der Tage mit der höchsten Nachfrage nach Filiale und Szenario.",
+    "scenario_range": "Szenariobereich",
+    "cautious": "Vorsichtig (-6%)",
+    "smartaira_forecast": "Smartaira-Prognose",
+    "optimistic": "Optimistisch (+6%)",
+    "forecast_date": "Prognosedatum",
+    "forecast_sales": "Prognostizierte Verkäufe",
+    "hover_date": "Datum:",
+    "hover_forecast": "Prognose:"
+  },
+  "decision": {
+    "title": "Was sollten wir jetzt tun?",
+    "caption": "Beginnen Sie mit Filialen, die Aufmerksamkeit benötigen, und öffnen Sie Details bei Bedarf.",
+    "alerts": "Warnungen mit Handlungsbedarf",
+    "alert_item": "{change_word} {change_pct:.1f}% • Prognose: {forecast:,.0f} • Maßnahme: {action}",
+    "accuracy_details": "Genauigkeitskennzahlen in einfacher Sprache",
+    "accuracy_close": "Wie nah liegt die Prognose?",
+    "total_error": "Fehler über alle Verkäufe",
+    "bias": "Über- oder unterschätzen wir?",
+    "baseline_comparison": "Vergleich mit einer einfachen Methode",
+    "accuracy_caption": "Je niedriger, desto besser. Ein positives Vorzeichen bedeutet, dass die Prognose im vorherigen Test über den tatsächlichen Verkäufen lag.",
+    "group_summary": "Übersicht nach Filiale oder Gruppe",
+    "group_accuracy": "Nachverfolgungsgenauigkeit nach Filiale oder Gruppe",
+    "compare_previous": "Vorherige Prognosen vergleichen",
+    "download_history": "Vergleichsverlauf herunterladen",
+    "details_export": "Details und Export"
+  },
+  "table": {
+    "previous_sales": "Vorherige Verkäufe für {horizon} Tage",
+    "forecast_sales": "Prognose für die nächsten {horizon} Tage",
+    "daily_forecast": "Durchschnittliche Tagesprognose",
+    "forecast_low": "Erwartetes Minimum",
+    "forecast_high": "Erwartetes Maximum",
+    "recommended_action": "Empfohlene Maßnahme",
+    "peak_day": "Tag mit höchster Erwartung",
+    "historical_error": "Historische Fehlerquote",
+    "total_error": "Fehler über alle Verkäufe",
+    "average_error": "Durchschnittlicher Fehler",
+    "bias": "Verzerrung",
+    "details_title": "Detaillierter Prognoseplan",
+    "display": "Daten anzeigen",
+    "future_only": "Nur kommende Prognosen",
+    "all_rows": "Alle historischen und kommenden Daten",
+    "filter_group": "Tabelle nach Filiale oder Gruppe filtern",
+    "actual_sales": "Tatsächliche Verkäufe",
+    "predicted_sales": "Prognostizierte Verkäufe",
+    "row_type": "Zeilentyp",
+    "top_drivers": "Wichtigste Verkaufstreiber",
+    "model_error": "Prognosefehlerquote",
+    "approval_status": "Genehmigungsstatus"
+  },
+  "actions": {
+    "increase_stock": "Überwachung und Bestand erhöhen",
+    "review_activation": "Ursache prüfen und Aktivierungsplan erstellen",
+    "continue_monitoring": "Weiter überwachen"
+  },
+  "drivers": {
+    "weekend": "Wochenende (Freitag und Samstag)",
+    "payday": "Monatsende und Zahltag",
+    "day_of_week": "Wochentag",
+    "month_seasonality": "Monatliche Saisonalität",
+    "day_of_month": "Tag des Monats",
+    "week_of_year": "Kalenderwoche",
+    "yearly_trend": "Jahrestrend",
+    "base_trend": "Grundtrend",
+    "historical_trend": "Historischer Trend",
+    "actual_history": "Tatsächliche historische Daten"
+  },
+  "governance": {
+    "comment": "Kommentar der Führungskraft vor der Genehmigung (optional)",
+    "comment_placeholder": "Beispiel: Mit höherem Bestand für die Filiale Nasr City genehmigt.",
+    "approved_by": "Prognose genehmigt von {user} ({timestamp})",
+    "approval_note": "Genehmigungshinweis: {comment}",
+    "approval_hint": "Durch die Genehmigung wird dieser Plan zur aktuellen Referenz für das Vertriebsteam.",
+    "approve": "Prognoseplan genehmigen"
+  },
+  "approval": {
+    "pending": "Genehmigung ausstehend",
+    "approved": "Genehmigt"
+  },
+  "export": {
+    "full_forecast": "Vollständige Prognosedatei herunterladen",
+    "history_file": "smartaira_forecast_history.csv",
+    "forecast_file": "smartaira_forecast_{date}.csv"
+  }
+}

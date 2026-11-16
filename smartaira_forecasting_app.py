@@ -14,6 +14,14 @@ import shap
 from sklearn.metrics import mean_absolute_percentage_error
 import streamlit as st
 
+from i18n import (
+    SUPPORTED_LANGUAGES,
+    apply_direction_styles,
+    init_i18n,
+    set_language,
+    t,
+)
+
 
 BUILD_ID_FALLBACK = "2e6ef18"
 
@@ -37,19 +45,27 @@ def get_build_id() -> str:
 
 def render_build_id(build_id: str) -> None:
     """Show a compact build marker for deployment verification."""
-    st.caption(f"نسخة التطبيق: {build_id}")
+    st.caption(t("app.build", build_id=build_id))
+
+
+def on_language_change() -> None:
+    """Synchronize the selected language and reset localized forecast output."""
+    set_language(st.session_state["language_selector"])
+    st.session_state["forecast_result"] = None
+    st.session_state["forecast_history"] = []
+    st.session_state["language_changed_notice"] = True
 
 
 DESIGN_OPTIONS = (
-    "Neumorphism ناعم",
-    "تنفيذي كلاسيكي",
-    "ورقي دافئ",
+    "neumorphism",
+    "classic",
+    "warm",
 )
 
 
 def get_design_css(design_style: str) -> str:
     """Return lightweight CSS overrides for the user's preferred visual treatment."""
-    if design_style == "تنفيذي كلاسيكي":
+    if design_style == "classic":
         return """
         <style>
             .stApp { background: #F8FAFC; }
@@ -74,7 +90,7 @@ def get_design_css(design_style: str) -> str:
             [data-baseweb="tab"][aria-selected="true"] { background: #ECFDF5; box-shadow: inset 0 -3px 0 #10B981; }
         </style>
         """
-    if design_style == "ورقي دافئ":
+    if design_style == "warm":
         return """
         <style>
             .stApp { background: #F4EFE6; }
@@ -614,14 +630,14 @@ def parse_flexible_dates(series: pd.Series) -> pd.Series:
 
 def detect_granularity(unique_dates: pd.DatetimeIndex) -> tuple[str, pd.DateOffset]:
     if len(unique_dates) < 2:
-        return "يومي", pd.DateOffset(days=1)
+        return t("granularity.daily"), pd.DateOffset(days=1)
     diffs = pd.Series(unique_dates).sort_values().diff().dropna().dt.days
     median_days = float(diffs.median())
     if median_days >= 25:
-        return "شهري", pd.DateOffset(months=1)
+        return t("granularity.monthly"), pd.DateOffset(months=1)
     if median_days >= 5:
-        return "أسبوعي", pd.DateOffset(weeks=1)
-    return "يومي", pd.DateOffset(days=1)
+        return t("granularity.weekly"), pd.DateOffset(weeks=1)
+    return t("granularity.daily"), pd.DateOffset(days=1)
 
 
 def aggregate_and_complete_sales(
@@ -662,7 +678,7 @@ def aggregate_and_complete_sales(
             if pd.api.types.is_numeric_dtype(work[col]):
                 merged[col] = merged[col].ffill().bfill().fillna(0.0)
             else:
-                merged[col] = merged[col].ffill().bfill().fillna("غير محدد")
+                merged[col] = merged[col].ffill().bfill().fillna(t("common.unspecified"))
         merged[date_col] = merged["_parsed_date"].dt.strftime("%Y-%m-%d")
         completed_frames.append(merged)
 
@@ -673,26 +689,26 @@ def validate_dataset(
     df: pd.DataFrame, date_col: str, target_col: str, group_col: Optional[str]
 ) -> tuple[bool, str, Optional[pd.DataFrame]]:
     if df is None or df.empty:
-        return False, "الملف غير صالح: ملف CSV المرفوع فارغ.", None
+        return False, t("validation.empty_file"), None
 
     if len(df) > 10_000:
         return (
             False,
-            f"الملف غير صالح: يحتوي على {len(df):,} صفاً. الحد الأقصى للرفع هو 10,000 صف.",
+            t("validation.max_rows", rows=len(df)),
             None,
         )
 
     if date_col not in df.columns or target_col not in df.columns or date_col == target_col:
         return (
             False,
-            "خطأ في الأعمدة: اختر عمود تاريخ وعمود قيمة مستهدف مختلفين من عناوين ملف CSV.",
+            t("validation.same_columns"),
             None,
         )
 
     if group_col and (group_col == date_col or group_col == target_col):
         return (
             False,
-            "خطأ في الأعمدة: عمود التجميع يجب أن يكون مختلفاً عن عمود التاريخ والقيمة.",
+            t("validation.invalid_group"),
             None,
         )
 
@@ -703,8 +719,7 @@ def validate_dataset(
         bad_idx = int(parsed_dates[parsed_dates.isna()].index[0]) + 2
         return (
             False,
-            f"يوجد تاريخ غير صالح في العمود '{date_col}' (مثلاً الصف {bad_idx}). "
-            "استخدم صيغة يوم/شهر/سنة أو سنة-شهر-يوم، وتأكد من عدم وجود تواريخ فارغة.",
+            t("validation.invalid_date", date_col=date_col, row=bad_idx),
             None,
         )
     work["_parsed_date"] = parsed_dates
@@ -716,8 +731,7 @@ def validate_dataset(
         bad_val = work.loc[numeric_target.isna()].iloc[0][target_col]
         return (
             False,
-            f"عمود القيمة '{target_col}' يحتوي على نص غير رقمي (مثلاً '{bad_val}' في الصف {bad_idx}). "
-            "احذف رموز العملات وأخطاء Excel قبل الرفع.",
+            t("validation.invalid_value", target_col=target_col, value=bad_val, row=bad_idx),
             None,
         )
     work[target_col] = numeric_target.astype(float)
@@ -730,14 +744,14 @@ def validate_dataset(
     if len(work) < 30:
         return (
             False,
-            f"البيانات التاريخية غير كافية: تم العثور على {len(work)} صفاً. نحتاج إلى 30 صفاً على الأقل لاكتشاف نمط المبيعات.",
+            t("validation.insufficient_rows", rows=len(work)),
             None,
         )
 
     if work[target_col].nunique() <= 1:
         return (
             False,
-            f"لا يمكن إعداد التوقعات: كل القيم التاريخية في '{target_col}' متطابقة. راجع عمود القيمة.",
+            t("validation.constant_values", target_col=target_col),
             None,
         )
 
@@ -746,11 +760,11 @@ def validate_dataset(
         if counts.max() < 15:
             return (
                 False,
-                "البيانات غير كافية: كل فرع أو مجموعة تحتاج إلى 15 صفاً تاريخياً على الأقل.",
+                t("validation.insufficient_group_rows"),
                 None,
             )
 
-    return True, "تم التحقق", work
+    return True, t("validation.verified"), work
 
 
 # -----------------------------------------------------------------------------
@@ -784,12 +798,13 @@ def run_auto_horizon_forecast(
     group_col: Optional[str],
     horizon: int,
     approval_status: str,
-    scenario_name: str = "الحالة الأساسية",
+    scenario_name: Optional[str] = None,
     scenario_multiplier: float = 1.0,
     planned_promo: bool = False,
     planned_discount_pct: float = 0.0,
     planned_price_change_pct: float = 0.0,
 ) -> dict:
+    scenario_name = scenario_name or t("scenario.baseline")
     df = validated_df.sort_values("_parsed_date").reset_index(drop=True)
     unique_dates = pd.DatetimeIndex(df["_parsed_date"].unique()).sort_values()
     granularity, step_offset = detect_granularity(unique_dates)
@@ -935,13 +950,13 @@ def run_auto_horizon_forecast(
         shap_vals = np.zeros((len(X_fut_raw), X_fut_raw.shape[1]), dtype=float)
 
     friendly_names = {
-        "cal_is_weekend_fri_sat": "عطلة نهاية الأسبوع (الجمعة والسبت)",
-        "cal_is_month_end_payday": "فترة آخر الشهر والمرتبات",
-        "cal_dayofweek": "يوم الأسبوع",
-        "cal_month": "موسمية الشهر",
-        "cal_day": "يوم الشهر",
-        "cal_weekofyear": "أسبوع السنة",
-        "cal_year": "الاتجاه السنوي",
+        "cal_is_weekend_fri_sat": t("drivers.weekend"),
+        "cal_is_month_end_payday": t("drivers.payday"),
+        "cal_dayofweek": t("drivers.day_of_week"),
+        "cal_month": t("drivers.month_seasonality"),
+        "cal_day": t("drivers.day_of_month"),
+        "cal_weekofyear": t("drivers.week_of_year"),
+        "cal_year": t("drivers.yearly_trend"),
     }
 
     top_drivers_per_row = []
@@ -956,7 +971,7 @@ def run_auto_horizon_forecast(
             impact = row_s[j]
             if abs(impact) >= 1.0:
                 parts.append(f"{label}={val} ({impact:+,.0f})")
-        top_drivers_per_row.append("، ".join(parts) if parts else "الاتجاه الأساسي")
+        top_drivers_per_row.append(", ".join(parts) if parts else t("drivers.base_trend"))
 
     mean_shap = shap_vals.mean(axis=0)
     driver_summary = pd.DataFrame(
@@ -973,11 +988,13 @@ def run_auto_horizon_forecast(
         .copy()
     )
     driver_summary["Direction"] = np.where(
-        driver_summary["Avg_Impact"] >= 0, "تأثير إيجابي (+)", "تأثير سلبي (-)"
+        driver_summary["Avg_Impact"] >= 0,
+        t("charts.positive_impact"),
+        t("charts.negative_impact"),
     )
 
     top_driver_name = (
-        driver_summary.iloc[0]["Driver"] if not driver_summary.empty else "الاتجاه التاريخي"
+        driver_summary.iloc[0]["Driver"] if not driver_summary.empty else t("drivers.historical_trend")
     )
 
     # Assemble combined output table preserving all original columns
@@ -987,8 +1004,8 @@ def run_auto_horizon_forecast(
     hist_out["smartaira_predicted_value"] = np.round(hist_preds, 2)
     hist_out["smartaira_forecast_low"] = np.nan
     hist_out["smartaira_forecast_high"] = np.nan
-    hist_out["smartaira_top_drivers"] = "بيانات فعلية سابقة"
-    mape_display = f"{mape_pct:.1f}%" if mape_pct is not None else "غير متاح"
+    hist_out["smartaira_top_drivers"] = t("drivers.actual_history")
+    mape_display = f"{mape_pct:.1f}%" if mape_pct is not None else t("common.not_available")
     hist_out["smartaira_model_mape_pct"] = mape_display
     hist_out["smartaira_approval_status"] = approval_status
 
@@ -1017,15 +1034,15 @@ def run_auto_horizon_forecast(
         non_zero = actual > 0
         series_accuracy_rows.append(
             {
-                (group_col or "السلسلة"): accuracy_group or "إجمالي الشركة",
-                "نسبة الخطأ التاريخية": round(
+                (group_col or t("common.series")): accuracy_group or t("common.company_total"),
+                t("table.historical_error"): round(
                     float(mean_absolute_percentage_error(actual[non_zero], predicted[non_zero])) * 100, 1
                 ) if non_zero.any() else None,
-                "الخطأ على إجمالي المبيعات": round(
+                t("table.total_error"): round(
                     float(np.sum(np.abs(predicted - actual)) / max(np.sum(np.abs(actual)), 1e-9)) * 100, 1
                 ),
-                "متوسط الخطأ": round(float(np.mean(np.abs(predicted - actual))), 2),
-                "الانحراف": round(float(np.mean(predicted - actual)), 2),
+                t("table.average_error"): round(float(np.mean(np.abs(predicted - actual))), 2),
+                t("table.bias"): round(float(np.mean(predicted - actual)), 2),
             }
         )
     series_accuracy_df = pd.DataFrame(series_accuracy_rows)
@@ -1039,6 +1056,14 @@ def run_auto_horizon_forecast(
     growth_pct = ((total_forecast - prior_total) / prior_total * 100.0) if prior_total > 0 else 0.0
 
     # Build Series-Level Executive Summary Table
+    previous_sales_col = t("table.previous_sales", horizon=horizon)
+    forecast_sales_col = t("table.forecast_sales", horizon=horizon)
+    change_col = t("charts.change")
+    daily_forecast_col = t("table.daily_forecast")
+    forecast_low_col = t("table.forecast_low")
+    forecast_high_col = t("table.forecast_high")
+    recommended_action_col = t("table.recommended_action")
+    peak_day_col = t("table.peak_day")
     if group_col:
         series_rows = []
         for grp in active_groups:
@@ -1054,18 +1079,18 @@ def run_auto_horizon_forecast(
             series_rows.append(
                 {
                     group_col: grp,
-                    f"المبيعات السابقة لـ {horizon} يوم": round(hist_sum, 2),
-                    f"توقعات الـ {horizon} يوم القادمة": round(fut_sum, 2),
-                    "نسبة التغير": round(g_delta, 1),
-                    "متوسط التوقع اليومي": round(float(g_fut.mean()), 2),
-                    "الحد الأدنى المتوقع": round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_low"].sum()), 2),
-                    "الحد الأعلى المتوقع": round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_high"].sum()), 2),
-                    "الإجراء المقترح": (
-                        "زيادة المتابعة والمخزون" if g_delta >= 10 else
-                        "مراجعة السبب ووضع خطة تنشيط" if g_delta <= -10 else
-                        "استمر في المتابعة"
+                    previous_sales_col: round(hist_sum, 2),
+                    forecast_sales_col: round(fut_sum, 2),
+                    change_col: round(g_delta, 1),
+                    daily_forecast_col: round(float(g_fut.mean()), 2),
+                    forecast_low_col: round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_low"].sum()), 2),
+                    forecast_high_col: round(float(fut_out[fut_out[group_col] == grp]["smartaira_forecast_high"].sum()), 2),
+                    recommended_action_col: (
+                        t("actions.increase_stock") if g_delta >= 10 else
+                        t("actions.review_activation") if g_delta <= -10 else
+                        t("actions.continue_monitoring")
                     ),
-                    "أعلى يوم متوقع": str(
+                    peak_day_col: str(
                         fut_out[fut_out[group_col] == grp]
                         .sort_values("smartaira_predicted_value", ascending=False)
                         .iloc[0][date_col]
@@ -1073,25 +1098,25 @@ def run_auto_horizon_forecast(
                 }
             )
         series_summary_df = pd.DataFrame(series_rows).sort_values(
-            f"توقعات الـ {horizon} يوم القادمة", ascending=False
+            forecast_sales_col, ascending=False
         )
     else:
         series_summary_df = pd.DataFrame(
             [
                 {
-                    "السلسلة": "إجمالي الشركة",
-                    f"المبيعات السابقة لـ {horizon} يوم": round(prior_total, 2),
-                    f"توقعات الـ {horizon} يوم القادمة": round(total_forecast, 2),
-                    "نسبة التغير": round(growth_pct, 1),
-                    "متوسط التوقع اليومي": round(float(fut_out["smartaira_predicted_value"].mean()), 2),
-                    "الحد الأدنى المتوقع": round(float(fut_out["smartaira_forecast_low"].sum()), 2),
-                    "الحد الأعلى المتوقع": round(float(fut_out["smartaira_forecast_high"].sum()), 2),
-                    "الإجراء المقترح": (
-                        "زيادة المتابعة والمخزون" if growth_pct >= 10 else
-                        "مراجعة السبب ووضع خطة تنشيط" if growth_pct <= -10 else
-                        "استمر في المتابعة"
+                    t("common.series"): t("common.company_total"),
+                    previous_sales_col: round(prior_total, 2),
+                    forecast_sales_col: round(total_forecast, 2),
+                    change_col: round(growth_pct, 1),
+                    daily_forecast_col: round(float(fut_out["smartaira_predicted_value"].mean()), 2),
+                    forecast_low_col: round(float(fut_out["smartaira_forecast_low"].sum()), 2),
+                    forecast_high_col: round(float(fut_out["smartaira_forecast_high"].sum()), 2),
+                    recommended_action_col: (
+                        t("actions.increase_stock") if growth_pct >= 10 else
+                        t("actions.review_activation") if growth_pct <= -10 else
+                        t("actions.continue_monitoring")
                     ),
-                    "أعلى يوم متوقع": str(
+                    peak_day_col: str(
                         fut_out.sort_values("smartaira_predicted_value", ascending=False).iloc[0][date_col]
                     ),
                 }
@@ -1160,9 +1185,13 @@ def build_3d_forecast_figure(res: dict) -> go.Figure:
         )
         x_labels = daily[d_col].astype(str).tolist()
         vals = daily["smartaira_predicted_value"].to_numpy(dtype=float)
-        y_labels = ["حذر (-6%)", "توقع سمارتيرا", "متفائل (+6%)"]
+        y_labels = [
+            t("charts.cautious"),
+            t("charts.smartaira_forecast"),
+            t("charts.optimistic"),
+        ]
         z_matrix = np.vstack([vals * 0.94, vals, vals * 1.06])
-        y_title = "نطاق السيناريو"
+        y_title = t("charts.scenario_range")
 
     x_idx = np.arange(len(x_labels))
     y_idx = np.arange(len(y_labels))
@@ -1187,11 +1216,11 @@ def build_3d_forecast_figure(res: dict) -> go.Figure:
                     "project": {"z": True},
                 }
             },
-            colorbar={"title": "المبيعات المتوقعة", "thickness": 14},
+            colorbar={"title": t("charts.forecast_sales"), "thickness": 14},
             hovertemplate=(
-                "<b>التاريخ:</b> %{text}<br>"
+                f"<b>{t('charts.hover_date')}</b> %{{text}}<br>"
                 f"<b>{y_title}:</b> %{{customdata}}<br>"
-                "<b>التوقع:</b> %{z:,.0f}<extra></extra>"
+                f"<b>{t('charts.hover_forecast')}</b> %{{z:,.0f}}<extra></extra>"
             ),
             text=np.tile(x_labels, (len(y_labels), 1)),
             customdata=np.tile(np.array(y_labels)[:, None], (1, len(x_labels))),
@@ -1221,7 +1250,7 @@ def build_3d_forecast_figure(res: dict) -> go.Figure:
         paper_bgcolor="#FFFFFF",
         scene={
             "xaxis": {
-                "title": "تاريخ التوقع",
+                "title": t("charts.forecast_date"),
                 "tickvals": x_idx[:: max(1, len(x_idx) // 6)],
                 "ticktext": x_labels[:: max(1, len(x_labels) // 6)],
                 "backgroundcolor": "#F8FAFC",
@@ -1235,7 +1264,7 @@ def build_3d_forecast_figure(res: dict) -> go.Figure:
                 "gridcolor": "#CBD5E1",
             },
             "zaxis": {
-                "title": "المبيعات المتوقعة",
+                "title": t("charts.forecast_sales"),
                 "backgroundcolor": "#F8FAFC",
                 "gridcolor": "#CBD5E1",
             },
@@ -1251,8 +1280,8 @@ def build_accuracy_gauge(accuracy_pct: float, mape_pct: float) -> go.Figure:
             mode="gauge+number+delta",
             value=accuracy_pct,
             number={"suffix": "%", "font": {"size": 34, "color": "#0F172A"}},
-            delta={"reference": 85.0, "increasing": {"color": "#10B981"}, "suffix": "% مقارنة بهدف 85%"},
-            title={"text": f"دقة التوقع السابقة (نسبة الخطأ: {mape_pct:.1f}%)", "font": {"size": 14, "color": "#475569"}},
+            delta={"reference": 85.0, "increasing": {"color": "#10B981"}, "suffix": t("charts.accuracy_gauge_delta")},
+            title={"text": t("charts.accuracy_gauge_title", error=mape_pct), "font": {"size": 14, "color": "#475569"}},
             gauge={
                 "axis": {"range": [50, 100], "tickwidth": 1, "tickcolor": "#94A3B8"},
                 "bar": {"color": "#10B981"},
@@ -1276,12 +1305,14 @@ def build_accuracy_gauge(accuracy_pct: float, mape_pct: float) -> go.Figure:
 # Main Application Entrypoint
 # -----------------------------------------------------------------------------
 def main() -> None:
+    active_lang = init_i18n()
     st.set_page_config(
-        page_title="منصة سمارتيرا لتوقع المبيعات",
+        page_title=t("app.page_title"),
         page_icon="📈",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+    apply_direction_styles()
     build_id = get_build_id()
     if st.session_state.get("_active_build_id") != build_id:
         st.cache_data.clear()
@@ -1290,12 +1321,26 @@ def main() -> None:
         st.query_params["build"] = build_id
     st.markdown(get_no_cache_meta(build_id), unsafe_allow_html=True)
     st.markdown(BRAND_CSS, unsafe_allow_html=True)
-    design_style = st.selectbox(
-        "نمط الواجهة",
-        options=DESIGN_OPTIONS,
-        index=0,
-        help="يمكنك تغيير شكل الواجهة في أي وقت دون التأثير على البيانات أو التوقعات.",
-    )
+    if st.session_state.get("language_selector") != active_lang:
+        st.session_state["language_selector"] = active_lang
+    selector_col, design_col = st.columns(2)
+    with selector_col:
+        st.selectbox(
+            t("language.selector"),
+            options=list(SUPPORTED_LANGUAGES),
+            format_func=lambda code: SUPPORTED_LANGUAGES[code]["label"],
+            key="language_selector",
+            on_change=on_language_change,
+        )
+    with design_col:
+        design_style = st.selectbox(
+            t("design.selector"),
+            options=DESIGN_OPTIONS,
+            index=0,
+            format_func=lambda style: t(f"design.{style}"),
+            help=t("design.help"),
+            key="design_selector",
+        )
     st.markdown(get_design_css(design_style), unsafe_allow_html=True)
     default_state = {
         "authenticated": False,
@@ -1308,21 +1353,26 @@ def main() -> None:
         "approved_by": None,
         "approval_comment": "",
         "forecast_history": [],
+        "language_changed_notice": False,
     }
     for k, v in default_state.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
+    if st.session_state.get("language_changed_notice"):
+        st.info(t("language.results_reset"))
+        st.session_state["language_changed_notice"] = False
+
     if not st.session_state["authenticated"]:
         render_build_id(build_id)
         st.markdown(
-            """
+            f"""
             <style>
-                [data-testid="stSidebar"] { display: none; }
+                [data-testid="stSidebar"] {{ display: none; }}
             </style>
             <div class="login-card">
-                <h2>🔐 الدخول إلى منصة سمارتيرا</h2>
-                <p>استخدم بيانات الدخول الجاهزة للانتقال إلى مساحة توقع المبيعات.</p>
+                <h2>🔐 {t("auth.title")}</h2>
+                <p>{t("auth.subtitle")}</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1331,9 +1381,9 @@ def main() -> None:
         expected_password = get_secret("DEMO_PASSWORD", "smartaira").strip()
         configured_login = has_configured_login()
         with st.form("mobile_login_form"):
-            username_input = st.text_input("اسم المستخدم", value="smartaira")
-            password_input = st.text_input("كلمة المرور", value="smartaira", type="password")
-            submitted = st.form_submit_button("دخول", type="primary", width="stretch")
+            username_input = st.text_input(t("auth.username"), value="smartaira")
+            password_input = st.text_input(t("auth.password"), value="smartaira", type="password")
+            submitted = st.form_submit_button(t("auth.sign_in"), type="primary", width="stretch")
             if submitted:
                 if configured_login:
                     credentials_valid = (
@@ -1350,11 +1400,11 @@ def main() -> None:
                     st.session_state["current_user"] = username_input.strip()
                     st.rerun()
                 else:
-                    st.error("اسم المستخدم أو كلمة المرور غير صحيحة. جرّب smartaira في الخانتين.")
+                    st.error(t("auth.invalid"))
         if configured_login:
-            st.info("استخدم بيانات الدخول التي جهزها مسؤول المنصة.")
+            st.info(t("auth.configured_info"))
         else:
-            st.info("بيانات الدخول التجريبية: smartaira / smartaira — للعرض فقط")
+            st.info(t("auth.demo_info"))
         st.stop()
 
     if st.session_state["forecast_result"] is None:
@@ -1364,16 +1414,16 @@ def main() -> None:
     st.markdown(
         f"""
         <div class="smartaira-hero">
-            <span class="smartaira-badge">سمارتيرا • توقع المبيعات</span>
-            <h1>توقّع مبيعاتك خلال دقائق</h1>
-            <div class="smartaira-tagline-ar">ارفع ملف CSV أو ابدأ ببيانات تجريبية</div>
+            <span class="smartaira-badge">{t("header.badge")}</span>
+            <h1>{t("header.title")}</h1>
+            <div class="smartaira-tagline-ar">{t("header.subtitle")}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     active_step = 3 if st.session_state["forecast_result"] is not None else (2 if st.session_state["raw_df"] is not None else 1)
-    step_labels = ["١. البيانات", "٢. الإعداد", "٣. النتيجة"]
+    step_labels = [t("workflow.data"), t("workflow.setup"), t("workflow.result")]
     step_markup = "".join(
         f'<div class="workflow-step {"active" if i + 1 == active_step else ""}">{label}</div>'
         + ('<span class="workflow-line"></span>' if i < 2 else '')
@@ -1382,15 +1432,15 @@ def main() -> None:
     st.markdown(f'<div class="workflow-steps">{step_markup}</div>', unsafe_allow_html=True)
 
     # Main-page workflow controls: no sidebar required.
-    st.markdown("### ١. اختر بيانات المبيعات")
+    st.markdown(f"### {t('data.heading')}")
     data_mode = st.radio(
-        "مصدر البيانات",
-        ["تجربة ببيانات جاهزة", "رفع ملف المبيعات"],
+        t("data.source"),
+        [t("data.sample_mode"), t("data.upload_mode")],
         horizontal=True,
     )
 
-    if data_mode == "تجربة ببيانات جاهزة":
-        if st.button("استخدام بيانات تجريبية جاهزة (720 صفاً)", type="primary", width="stretch"):
+    if data_mode == t("data.sample_mode"):
+        if st.button(t("data.sample_button", rows=720), type="primary", width="stretch"):
             st.session_state["raw_df"] = generate_sample_retail_csv()
             st.session_state["source_name"] = "smartaira_sample_retail_sales.csv"
             st.session_state["forecast_result"] = None
@@ -1401,17 +1451,17 @@ def main() -> None:
             {
                 "date": ["2026-01-01", "2026-01-02"],
                 "sales_amount": [12500, 13800],
-                "branch": ["فرع القاهرة", "فرع القاهرة"],
+                "branch": ["Cairo Branch", "Cairo Branch"],
             }
         )
         st.download_button(
-            "تحميل نموذج ملف CSV",
+            t("data.template_download"),
             data=template_df.to_csv(index=False).encode("utf-8-sig"),
             file_name="smartaira_sales_template.csv",
             mime="text/csv",
             width="stretch",
         )
-        uploaded = st.file_uploader("ارفع ملف CSV بصيغة UTF-8 (حتى 5 ميجابايت)", type=["csv"])
+        uploaded = st.file_uploader(t("data.upload_label"), type=["csv"])
         if uploaded is not None:
             try:
                 raw_bytes = uploaded.getvalue()
@@ -1422,13 +1472,13 @@ def main() -> None:
                 st.session_state["approval_status"] = "PENDING"
                 st.session_state["approved_at"] = None
             except Exception as exc:
-                st.error(f"تعذر قراءة ملف CSV: {exc}")
+                st.error(t("data.upload_error", error=exc))
 
     df_loaded: Optional[pd.DataFrame] = st.session_state["raw_df"]
     date_col = target_col = None
     group_col: Optional[str] = None
     horizon = 30
-    scenario_name = "الحالة الأساسية"
+    scenario_name = t("scenario.baseline")
     scenario_multiplier = 1.0
     planned_promo = False
     planned_discount_pct = 0.0
@@ -1437,7 +1487,7 @@ def main() -> None:
 
     if df_loaded is not None:
         st.divider()
-        st.subheader("٢. إعداد التوقع")
+        st.subheader(t("settings.heading"))
         cols = df_loaded.columns.tolist()
 
         default_date_idx = next((i for i, c in enumerate(cols) if "date" in c.lower()), 0)
@@ -1445,42 +1495,43 @@ def main() -> None:
             (i for i, c in enumerate(cols) if any(k in c.lower() for k in ("sales", "revenue", "amount", "qty"))),
             len(cols) - 1,
         )
-        default_group_choices = ["بدون تقسيم (إجمالي الشركة)"] + cols
+        no_group_label = t("settings.no_group")
+        default_group_choices = [no_group_label] + cols
         default_group_idx = next(
             (i for i, c in enumerate(default_group_choices) if any(k in c.lower() for k in ("branch", "sku", "store", "region"))),
             0,
         )
 
-        date_col = st.selectbox("عمود التاريخ", options=cols, index=default_date_idx)
-        target_col = st.selectbox("عمود المبيعات أو القيمة", options=cols, index=default_target_idx)
-        group_choice = st.selectbox("التقسيم حسب فرع أو صنف (اختياري)", options=default_group_choices, index=default_group_idx)
-        group_col = None if group_choice == "بدون تقسيم (إجمالي الشركة)" else group_choice
-        horizon = st.selectbox("عدد الفترات القادمة", options=[7, 14, 30, 60], index=2, format_func=lambda x: f"{x} يوم")
+        date_col = st.selectbox(t("settings.date_column"), options=cols, index=default_date_idx)
+        target_col = st.selectbox(t("settings.target_column"), options=cols, index=default_target_idx)
+        group_choice = st.selectbox(t("settings.group_column"), options=default_group_choices, index=default_group_idx)
+        group_col = None if group_choice == no_group_label else group_choice
+        horizon = st.selectbox(t("settings.horizon"), options=[7, 14, 30, 60], index=2, format_func=lambda x: t("settings.horizon_option", days=x))
 
-        with st.expander("تحسين التوقع حسب خطتك (اختياري)", expanded=False):
+        with st.expander(t("settings.improve"), expanded=False):
             scenario_options = {
-                "الحالة الأساسية": 1.0,
-                "نمو متفائل (+10%)": 1.10,
-                "حالة حذرة (-10%)": 0.90,
+                t("scenario.baseline"): 1.0,
+                t("scenario.optimistic"): 1.10,
+                t("scenario.cautious"): 0.90,
             }
-            scenario_name = st.selectbox("اختر السيناريو", options=list(scenario_options))
+            scenario_name = st.selectbox(t("settings.scenario"), options=list(scenario_options))
             scenario_multiplier = scenario_options[scenario_name]
-            planned_promo = st.checkbox("يوجد عرض أو حملة خلال الفترة القادمة")
+            planned_promo = st.checkbox(t("settings.promo"))
             if planned_promo:
-                planned_discount_pct = st.number_input("نسبة الخصم المتوقعة (%)", min_value=0.0, max_value=90.0, value=10.0, step=1.0)
-            planned_price_change_pct = st.number_input("تغير السعر المتوقع (%)", min_value=-90.0, max_value=200.0, value=0.0, step=1.0)
-            sales_target = st.number_input("هدف المبيعات للفترة القادمة (اختياري)", min_value=0.0, value=0.0, step=1000.0)
+                planned_discount_pct = st.number_input(t("settings.discount"), min_value=0.0, max_value=90.0, value=10.0, step=1.0)
+            planned_price_change_pct = st.number_input(t("settings.price_change"), min_value=-90.0, max_value=200.0, value=0.0, step=1.0)
+            sales_target = st.number_input(t("settings.sales_target"), min_value=0.0, value=0.0, step=1000.0)
 
-        run_clicked = st.button("ابدأ توقع المبيعات", type="primary", width="stretch")
+        run_clicked = st.button(t("settings.run"), type="primary", width="stretch")
     else:
         run_clicked = False
 
-    with st.expander("الخصوصية وإدارة الجلسة", expanded=False):
+    with st.expander(t("privacy.title"), expanded=False):
         st.markdown(
-            '<div class="privacy-box">🔒 تعمل النسخة التجريبية في الذاكرة المؤقتة فقط ولا يتم تخزين ملفاتك بعد إغلاق الجلسة.</div>',
+            f'<div class="privacy-box">🔒 {t("privacy.body")}</div>',
             unsafe_allow_html=True,
         )
-        if st.button("مسح البيانات وتسجيل الخروج", width="stretch"):
+        if st.button(t("privacy.clear_logout"), width="stretch"):
             for k, v in default_state.items():
                 st.session_state[k] = v
             st.rerun()
@@ -1488,17 +1539,17 @@ def main() -> None:
     # Main Canvas: Status Strip & Validation
     if df_loaded is None:
         st.markdown(
-            """
+            f"""
             <div class="status-strip">
-                <span><b>البيانات:</b> لم يتم اختيار ملف بعد</span>
-                <span class="status-pill-active">١. في انتظار ملف المبيعات</span>
+                <span><b>{t("data.empty_status")}</b></span>
+                <span class="status-pill-active">{t("data.waiting_file")}</span>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.info("👈 اختر **استخدام بيانات تجريبية جاهزة** أو ارفع **ملف المبيعات** من هذه الصفحة للبدء.")
+        st.info(t("data.start_info"))
         st.markdown(
-            '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
+            f'<div class="brand-footer">{t("app.footer")}</div>',
             unsafe_allow_html=True,
         )
         st.stop()
@@ -1515,25 +1566,25 @@ def main() -> None:
     date_span = f"{unique_dates.min().strftime('%Y-%m-%d')} → {unique_dates.max().strftime('%Y-%m-%d')}"
 
     stage_label = (
-        "٣. التوقعات جاهزة"
+        t("status.ready")
         if st.session_state["forecast_result"] is not None
-        else f"٢. تم فحص البيانات ({granularity_lbl} • {series_count} سلسلة)"
+        else t("status.validated", granularity=granularity_lbl, series_count=series_count)
     )
 
     st.markdown(
         f"""
         <div class="status-strip">
-            <span><b>الملف:</b> {st.session_state['source_name']} &nbsp;|&nbsp; <b>الصفوف:</b> {len(validated_df):,} &nbsp;|&nbsp; <b>الفترة:</b> {date_span}</span>
+            <span><b>{t("data.file_status", file_name=st.session_state['source_name'], rows=len(validated_df), date_span=date_span)}</b></span>
             <span class="status-pill-active">{stage_label}</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    with st.expander("معاينة بيانات المبيعات — أول 5 صفوف", expanded=False):
+    with st.expander(t("data.preview"), expanded=False):
         st.dataframe(df_loaded.head(5), width="stretch", hide_index=True)
 
     if run_clicked:
-        with st.spinner("جاري تحليل البيانات وحساب العوامل المؤثرة في المبيعات..."):
+        with st.spinner(t("spinner.forecasting")):
             result = run_auto_horizon_forecast(
                 validated_df=validated_df,
                 original_cols=df_loaded.columns.tolist(),
@@ -1553,10 +1604,10 @@ def main() -> None:
             st.session_state["forecast_result"] = result
             st.session_state["forecast_history"].append(
                 {
-                    "وقت التشغيل": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "السيناريو": scenario_name,
-                    "إجمالي التوقع": result["total_forecast"],
-                    "نسبة التغير": result["growth_pct"],
+                    t("charts.forecast_date"): datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    t("settings.scenario"): scenario_name,
+                    t("kpi.total_forecast", horizon=horizon): result["total_forecast"],
+                    t("charts.change"): result["growth_pct"],
                 }
             )
             st.session_state["approval_status"] = "PENDING"
@@ -1565,35 +1616,33 @@ def main() -> None:
 
     res = st.session_state["forecast_result"]
     if res is None:
-        st.info("👈 راجع اختيار الأعمدة بالأعلى ثم اضغط **ابدأ توقع المبيعات**.")
+        st.info(t("settings.review_columns"))
         st.markdown(
-            '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; توقعات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
+            f'<div class="brand-footer">{t("app.footer")}</div>',
             unsafe_allow_html=True,
         )
         st.stop()
 
     if res.get("excluded_groups"):
-        excluded_text = "، ".join(str(item) for item in res["excluded_groups"][:8])
+        excluded_text = ", ".join(str(item) for item in res["excluded_groups"][:8])
         st.warning(
-            f"تم استبعاد {len(res['excluded_groups'])} فرع/مجموعة بدون مبيعات حديثة من التوقع: {excluded_text}."
+            t("status.excluded", count=len(res["excluded_groups"]), groups=excluded_text)
         )
 
     st.divider()
 
-    trend_word = "زيادة" if res["growth_pct"] >= 0 else "انخفاض"
+    trend_word = t("result.increase") if res["growth_pct"] >= 0 else t("result.decrease")
     target_message = ""
     if res.get("sales_target"):
         gap = res["target_gap"]
         target_message = (
-            f" الهدف أعلى من التوقع بـ {abs(gap):,.0f}." if gap > 0 else
-            f" التوقع أعلى من الهدف بـ {abs(gap):,.0f}."
+            " " + (t("result.target_above", gap=abs(gap)) if gap > 0 else
+            t("result.forecast_above", gap=abs(gap)))
         )
     st.markdown(
         f"""
         <div class="exec-callout">
-            <b>ملخص التوقع:</b> نتوقع {trend_word} المبيعات بنسبة <b>{abs(res['growth_pct']):.1f}%</b> خلال {res['horizon']} يوم.
-            النطاق المتوقع من <b>{res['forecast_low_total']:,.0f}</b> إلى <b>{res['forecast_high_total']:,.0f}</b>.
-            السيناريو المستخدم: <b>{res['scenario_name']}</b>.{target_message}
+            <b>{t("result.summary", trend=trend_word, growth=abs(res['growth_pct']), horizon=res['horizon'], low=res['forecast_low_total'], high=res['forecast_high_total'], scenario=res['scenario_name'], target_message=target_message)}</b>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1604,31 +1653,31 @@ def main() -> None:
     k3, k4 = st.columns(2)
     with k1:
         st.metric(
-            label=f"إجمالي التوقعات لـ {res['horizon']} يوم",
+            label=t("kpi.total_forecast", horizon=res["horizon"]),
             value=f"{res['total_forecast']:,.0f}",
-            delta=f"{res['growth_pct']:+.1f}% مقارنة بالفترة السابقة",
+            delta=t("kpi.vs_previous", growth=res["growth_pct"]),
         )
     with k2:
-        accuracy_display = f"{res['accuracy_pct']:.1f}%" if res.get("accuracy_pct") is not None else "غير متاح"
-        error_display = f"نسبة الخطأ: {res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "لا توجد بيانات اختبار كافية"
+        accuracy_display = f"{res['accuracy_pct']:.1f}%" if res.get("accuracy_pct") is not None else t("common.not_available")
+        error_display = t("kpi.error_rate", error=res["mape_pct"]) if res.get("mape_pct") is not None else t("kpi.not_enough_data")
         st.metric(
-            label="مدى دقة التوقع",
+            label=t("kpi.forecast_accuracy"),
             value=accuracy_display,
             delta=error_display,
             delta_color="off",
         )
     with k3:
         st.metric(
-            label="نطاق التوقع",
-            value=f"{res['n_series']} سلسلة نشطة",
-            delta=f"بيانات {res['granularity']}",
+            label=t("kpi.forecast_scope"),
+            value=t("kpi.active_series", count=res["n_series"]),
+            delta=t("kpi.granularity_data", granularity=res["granularity"]),
             delta_color="off",
         )
     with k4:
         st.metric(
-            label="أهم عامل مؤثر",
+            label=t("kpi.top_driver"),
             value=res["top_driver_name"],
-            delta="أكبر تأثير على التوقع",
+            delta=t("kpi.largest_impact"),
             delta_color="off",
         )
 
@@ -1637,9 +1686,9 @@ def main() -> None:
     # Multi-View Analytics Workspace: 2D Graphics + 3D Terrain + Tabular Plans
     tab_decision, tab_charts, tab_3d = st.tabs(
         [
-            "✅ القرار والتنبيهات",
-            "📈 الاتجاهات والعوامل المؤثرة",
-            "🌐 تفاصيل الفروع",
+            f"✅ {t('tabs.decision')}",
+            f"📈 {t('tabs.charts')}",
+            f"🌐 {t('tabs.branches')}",
         ]
     )
 
@@ -1655,15 +1704,16 @@ def main() -> None:
         chart_col1, chart_col2 = st.columns([1.45, 1.0], gap="large")
 
         with chart_col1:
-            st.subheader("📈 المبيعات السابقة مقارنة بالتوقعات القادمة")
+            st.subheader(f"📈 {t('charts.history_forecast')}")
             if g_col:
-                filter_options = ["كل الفروع والمجموعات"] + res["active_groups"]
+                all_groups_label = t("common.all_groups")
+                filter_options = [all_groups_label] + res["active_groups"]
                 selected_series = st.selectbox(
-                    "فلترة الرسم حسب الفرع أو المجموعة",
+                    t("charts.filter_series"),
                     options=filter_options,
                     key="chart_2d_series_filter",
                 )
-                if selected_series == "كل الفروع والمجموعات":
+                if selected_series == all_groups_label:
                     plot_base = (
                         combined_df.groupby(["_sort_date", "smartaira_row_type"], as_index=False)
                         .agg({t_col: "sum", "smartaira_predicted_value": "sum"})
@@ -1675,13 +1725,13 @@ def main() -> None:
 
             hist_plot = plot_base[plot_base["smartaira_row_type"] == "HISTORICAL"][["_sort_date", t_col]].copy()
             hist_plot = hist_plot.rename(columns={"_sort_date": "Date", t_col: "Sales"})
-            hist_plot["Series"] = "المبيعات السابقة"
+            hist_plot["Series"] = t("charts.history_legend")
 
             fut_plot = plot_base[plot_base["smartaira_row_type"] == "FORECAST"][
                 ["_sort_date", "smartaira_predicted_value"]
             ].copy()
             fut_plot = fut_plot.rename(columns={"_sort_date": "Date", "smartaira_predicted_value": "Sales"})
-            fut_plot["Series"] = "توقع سمارتيرا"
+            fut_plot["Series"] = t("charts.forecast_legend")
 
             line_df = pd.concat([hist_plot, fut_plot], ignore_index=True)
 
@@ -1689,12 +1739,12 @@ def main() -> None:
                 alt.Chart(line_df)
                 .mark_line(point=alt.OverlayMarkDef(size=35), strokeWidth=2.6)
                 .encode(
-                    x=alt.X("Date:T", title="التاريخ"),
-                    y=alt.Y("Sales:Q", title="قيمة المبيعات"),
+                    x=alt.X("Date:T", title=t("charts.date")),
+                    y=alt.Y("Sales:Q", title=t("charts.sales_value")),
                     color=alt.Color(
                         "Series:N",
                         scale=alt.Scale(
-                            domain=["المبيعات السابقة", "توقع سمارتيرا"],
+                            domain=[t("charts.history_legend"), t("charts.forecast_legend")],
                             range=["#0F172A", "#10B981"],
                         ),
                         legend=alt.Legend(orient="top", title=None),
@@ -1702,15 +1752,15 @@ def main() -> None:
                     strokeDash=alt.StrokeDash(
                         "Series:N",
                         scale=alt.Scale(
-                            domain=["المبيعات السابقة", "توقع سمارتيرا"],
+                            domain=[t("charts.history_legend"), t("charts.forecast_legend")],
                             range=[[1, 0], [6, 4]],
                         ),
                         legend=None,
                     ),
                     tooltip=[
-                        alt.Tooltip("Date:T", title="التاريخ", format="%Y-%m-%d"),
-                        alt.Tooltip("Series:N", title="النوع"),
-                        alt.Tooltip("Sales:Q", title="المبيعات", format=",.2f"),
+                        alt.Tooltip("Date:T", title=t("charts.date"), format="%Y-%m-%d"),
+                        alt.Tooltip("Series:N", title=t("charts.type")),
+                        alt.Tooltip("Sales:Q", title=t("charts.sales"), format=",.2f"),
                     ],
                 )
                 .properties(height=360)
@@ -1727,28 +1777,28 @@ def main() -> None:
             st.altair_chart(line_chart + rule_chart, width="stretch")
 
         with chart_col2:
-            st.subheader("🔍 ما العوامل الأكثر تأثيرًا على التوقع؟")
+            st.subheader(f"🔍 {t('charts.drivers')}")
             driver_df: pd.DataFrame = res["driver_summary"]
             if driver_df.empty:
-                st.info("التوقع يعتمد على الاتجاه المعتاد للمبيعات.")
+                st.info(t("charts.usual_trend"))
             else:
                 bar_chart = (
                     alt.Chart(driver_df)
                     .mark_bar(cornerRadiusEnd=4)
                     .encode(
-                        x=alt.X("Avg_Impact:Q", title="متوسط التأثير على المبيعات"),
+                        x=alt.X("Avg_Impact:Q", title=t("charts.average_impact")),
                         y=alt.Y("Driver:N", sort="-x", title=None),
                         color=alt.Color(
                             "Direction:N",
                             scale=alt.Scale(
-                                domain=["تأثير إيجابي (+)", "تأثير سلبي (-)"],
+                                domain=[t("charts.positive_impact"), t("charts.negative_impact")],
                                 range=["#10B981", "#F59E0B"],
                             ),
                             legend=alt.Legend(orient="top", title=None),
                         ),
                         tooltip=[
                             alt.Tooltip("Driver:N"),
-                            alt.Tooltip("Avg_Impact:Q", title="التأثير على المبيعات", format="+,.1f"),
+                            alt.Tooltip("Avg_Impact:Q", title=t("charts.impact"), format="+,.1f"),
                         ],
                     )
                     .properties(height=360)
@@ -1758,17 +1808,17 @@ def main() -> None:
         # Secondary 2D Row: Branch Forecast Share + Executive Accuracy Gauge
         sub_c1, sub_c2 = st.columns([1.45, 1.0], gap="large")
         with sub_c1:
-            st.subheader("📊 إجمالي التوقعات لكل فرع أو مجموعة")
+            st.subheader(f"📊 {t('charts.by_group')}")
             summary_df: pd.DataFrame = res["series_summary_df"]
             series_col_name = summary_df.columns[0]
-            forecast_col_name = f"توقعات الـ {res['horizon']} يوم القادمة"
+            forecast_col_name = t("table.forecast_sales", horizon=res["horizon"])
 
             comp_chart = (
                 alt.Chart(summary_df)
                 .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#0F172A")
                 .encode(
                     x=alt.X(f"{series_col_name}:N", sort="-y", title=None),
-                    y=alt.Y(f"{forecast_col_name}:Q", title="إجمالي المبيعات المتوقعة"),
+                    y=alt.Y(f"{forecast_col_name}:Q", title=t("charts.total_forecast_sales")),
                     color=alt.Color(
                         f"{series_col_name}:N",
                         scale=alt.Scale(range=["#10B981", "#0F172A", "#F59E0B", "#3B82F6", "#14B8A6"]),
@@ -1777,7 +1827,7 @@ def main() -> None:
                     tooltip=[
                         alt.Tooltip(f"{series_col_name}:N"),
                         alt.Tooltip(f"{forecast_col_name}:Q", format=",.2f"),
-                        alt.Tooltip("نسبة التغير:Q", title="نسبة التغير", format="+.1f"),
+                        alt.Tooltip(f"{t('charts.change')}:Q", title=t("charts.change"), format="+.1f"),
                     ],
                 )
                 .properties(height=250)
@@ -1785,23 +1835,23 @@ def main() -> None:
             st.altair_chart(comp_chart, width="stretch")
 
         with sub_c2:
-            st.subheader("🎯 مدى قرب التوقع من الواقع")
+            st.subheader(f"🎯 {t('charts.accuracy')}")
             if res.get("accuracy_pct") is not None and res.get("mape_pct") is not None:
                 st.plotly_chart(
                     build_accuracy_gauge(res["accuracy_pct"], res["mape_pct"]),
                     width="stretch",
                 )
             else:
-                st.info("لا توجد بيانات تاريخية كافية لقياس الدقة بعد. سيظل التوقع متاحاً مع نطاق احتياطي.")
+                st.info(t("charts.not_enough_accuracy"))
 
     # -------------------------------------------------------------------------
     # TAB 2: Interactive 3D Multi-Branch Demand Terrain
     # -------------------------------------------------------------------------
     with tab_3d:
         render_build_id(build_id)
-        st.subheader("🌐 تفاصيل الطلب حسب الفروع")
+        st.subheader(f"🌐 {t('charts.branch_details')}")
         st.caption(
-            "شاشة تفصيلية اختيارية لرؤية الأيام الأعلى طلباً حسب الفروع والسيناريوهات."
+            t("charts.branch_details_caption")
         )
         st.plotly_chart(build_3d_forecast_figure(res), width="stretch")
 
@@ -1810,128 +1860,126 @@ def main() -> None:
     # -------------------------------------------------------------------------
     with tab_decision:
         render_build_id(build_id)
-        st.subheader("✅ ماذا نفعل الآن؟")
-        st.caption("ابدأ بالفروع التي تحتاج متابعة، ثم افتح التفاصيل عند الحاجة.")
+        st.subheader(f"✅ {t('decision.title')}")
+        st.caption(t("decision.caption"))
 
-        with st.expander("تنبيهات تحتاج متابعة", expanded=True):
+        with st.expander(t("decision.alerts"), expanded=True):
             exceptions_df = res["series_summary_df"].copy()
-            if "نسبة التغير" in exceptions_df.columns:
-                exceptions_df = exceptions_df.sort_values("نسبة التغير")
-            forecast_column = f"توقعات الـ {res['horizon']} يوم القادمة"
+            change_col = t("charts.change")
+            if change_col in exceptions_df.columns:
+                exceptions_df = exceptions_df.sort_values(change_col)
+            forecast_column = t("table.forecast_sales", horizon=res["horizon"])
             for _, exception in exceptions_df.head(5).iterrows():
-                series_name = exception.get(g_col or "السلسلة", "إجمالي الشركة")
-                change_value = float(exception.get("نسبة التغير", 0) or 0)
-                change_word = "زيادة" if change_value >= 0 else "انخفاض"
+                series_name = exception.get(g_col or t("common.series"), t("common.company_total"))
+                change_value = float(exception.get(change_col, 0) or 0)
+                change_word = t("result.increase") if change_value >= 0 else t("result.decrease")
                 forecast_value = float(exception.get(forecast_column, 0) or 0)
-                action = exception.get("الإجراء المقترح", "استمر في المتابعة")
+                action = exception.get(t("table.recommended_action"), t("actions.continue_monitoring"))
                 with st.container(border=True):
                     st.markdown(f"**{series_name}**")
-                    st.write(
-                        f"{change_word} {abs(change_value):.1f}% • "
-                        f"التوقع: {forecast_value:,.0f} • الإجراء: {action}"
-                    )
+                    st.write(t("decision.alert_item", change_word=change_word, change_pct=abs(change_value), forecast=forecast_value, action=action))
 
-        with st.expander("مؤشرات الدقة بطريقة مبسطة", expanded=False):
+        with st.expander(t("decision.accuracy_details"), expanded=False):
             metric_cols = st.columns(2)
             with metric_cols[0]:
-                mape_display = f"{res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else "غير متاح"
-                st.metric("مدى قرب التوقع من الواقع", mape_display)
+                mape_display = f"{res['mape_pct']:.1f}%" if res.get("mape_pct") is not None else t("common.not_available")
+                st.metric(t("decision.accuracy_close"), mape_display)
             with metric_cols[1]:
-                wape_display = f"{res['wape_pct']:.1f}%" if res.get("wape_pct") is not None else "غير متاح"
-                st.metric("الخطأ على إجمالي المبيعات", wape_display)
+                wape_display = f"{res['wape_pct']:.1f}%" if res.get("wape_pct") is not None else t("common.not_available")
+                st.metric(t("decision.total_error"), wape_display)
             metric_cols = st.columns(2)
             with metric_cols[0]:
-                bias_display = f"{res['bias_pct']:+.1f}%" if res.get("bias_pct") is not None else "غير متاح"
-                st.metric("هل نبالغ أم نقلل؟", bias_display)
+                bias_display = f"{res['bias_pct']:+.1f}%" if res.get("bias_pct") is not None else t("common.not_available")
+                st.metric(t("decision.bias"), bias_display)
             with metric_cols[1]:
-                baseline_display = f"{res['baseline_mape_pct']:.1f}%" if res.get("baseline_mape_pct") is not None else "غير متاح"
-                st.metric("مقارنة بالطريقة البسيطة", baseline_display)
-            st.caption("النسبة الأقل أفضل. الإشارة الموجبة تعني أن التوقع أعلى من المبيعات الفعلية في الاختبار السابق.")
+                baseline_display = f"{res['baseline_mape_pct']:.1f}%" if res.get("baseline_mape_pct") is not None else t("common.not_available")
+                st.metric(t("decision.baseline_comparison"), baseline_display)
+            st.caption(t("decision.accuracy_caption"))
 
-        with st.expander("ملخص كل فرع أو مجموعة", expanded=False):
+        with st.expander(t("decision.group_summary"), expanded=False):
             st.dataframe(
                 res["series_summary_df"],
                 width="stretch",
                 hide_index=True,
                 column_config={
-                    f"المبيعات السابقة لـ {res['horizon']} يوم": st.column_config.NumberColumn(format="%,.2f"),
-                    f"توقعات الـ {res['horizon']} يوم القادمة": st.column_config.NumberColumn(format="%,.2f"),
-                    "نسبة التغير": st.column_config.NumberColumn(format="%+.1f%%"),
-                    "متوسط التوقع اليومي": st.column_config.NumberColumn(format="%,.2f"),
+                    t("table.previous_sales", horizon=res["horizon"]): st.column_config.NumberColumn(format="%,.2f"),
+                    t("table.forecast_sales", horizon=res["horizon"]): st.column_config.NumberColumn(format="%,.2f"),
+                    t("charts.change"): st.column_config.NumberColumn(format="%+.1f%%"),
+                    t("table.daily_forecast"): st.column_config.NumberColumn(format="%,.2f"),
                 },
             )
 
-        with st.expander("دقة المتابعة حسب الفرع أو المجموعة", expanded=False):
+        with st.expander(t("decision.group_accuracy"), expanded=False):
             st.dataframe(res["series_accuracy_df"], width="stretch", hide_index=True)
 
         if len(st.session_state.get("forecast_history", [])) > 1:
-            with st.expander("مقارنة بالتوقعات السابقة", expanded=False):
+            with st.expander(t("decision.compare_previous"), expanded=False):
                 history_df = pd.DataFrame(st.session_state["forecast_history"])
                 st.dataframe(history_df, width="stretch", hide_index=True)
                 st.download_button(
-                    "تحميل سجل المقارنة",
+                    t("decision.download_history"),
                     data=history_df.to_csv(index=False).encode("utf-8-sig"),
-                    file_name="smartaira_forecast_history.csv",
+                    file_name=t("export.history_file"),
                     mime="text/csv",
                     width="stretch",
                 )
 
-        st.subheader("📋 التفاصيل وملف التصدير")
+        st.subheader(f"📋 {t('decision.details_export')}")
 
         export_df = res["combined_df"].drop(columns=["_sort_date"]).copy()
         export_df["smartaira_approval_status"] = st.session_state["approval_status"]
         download_df = export_df.copy()
         download_df["smartaira_row_type"] = download_df["smartaira_row_type"].map(
-            {"HISTORICAL": "بيانات سابقة", "FORECAST": "توقعات قادمة"}
+            {"HISTORICAL": t("common.historical"), "FORECAST": t("common.forecast")}
         )
         download_df["smartaira_approval_status"] = download_df["smartaira_approval_status"].map(
-            {"PENDING": "في انتظار الاعتماد", "APPROVED": "تم الاعتماد"}
+            {"PENDING": t("approval.pending"), "APPROVED": t("approval.approved")}
         )
         download_df = download_df.rename(
             columns={
-                "smartaira_row_type": "نوع الصف",
-                "smartaira_predicted_value": "المبيعات المتوقعة",
-                "smartaira_forecast_low": "الحد الأدنى المتوقع",
-                "smartaira_forecast_high": "الحد الأعلى المتوقع",
-                "smartaira_top_drivers": "أهم العوامل المؤثرة",
-                "smartaira_model_mape_pct": "نسبة الخطأ في التوقع",
-                "smartaira_approval_status": "حالة الاعتماد",
+                "smartaira_row_type": t("table.row_type"),
+                "smartaira_predicted_value": t("table.predicted_sales"),
+                "smartaira_forecast_low": t("table.forecast_low"),
+                "smartaira_forecast_high": t("table.forecast_high"),
+                "smartaira_top_drivers": t("table.top_drivers"),
+                "smartaira_model_mape_pct": t("table.model_error"),
+                "smartaira_approval_status": t("table.approval_status"),
             }
         )
 
         tbl_f1, tbl_f2 = st.columns([1.4, 1.0])
         with tbl_f1:
             row_filter = st.radio(
-                "عرض البيانات",
-                ["التوقعات القادمة فقط", "كل البيانات السابقة والقادمة"],
+                t("table.display"),
+                [t("table.future_only"), t("table.all_rows")],
                 horizontal=False,
             )
         with tbl_f2:
             if g_col:
                 tbl_group_choice = st.selectbox(
-                    "فلترة الجدول حسب الفرع أو المجموعة",
-                    options=["كل الفروع والمجموعات"] + res["active_groups"],
+                    t("table.filter_group"),
+                    options=[t("common.all_groups")] + res["active_groups"],
                     key="table_group_filter",
                 )
             else:
-                tbl_group_choice = "كل الفروع والمجموعات"
+                tbl_group_choice = t("common.all_groups")
 
         display_df = (
             export_df[export_df["smartaira_row_type"] == "FORECAST"].copy()
-            if row_filter == "التوقعات القادمة فقط"
+            if row_filter == t("table.future_only")
             else export_df.copy()
         )
-        if g_col and tbl_group_choice != "كل الفروع والمجموعات":
+        if g_col and tbl_group_choice != t("common.all_groups"):
             display_df = display_df[display_df[g_col] == tbl_group_choice]
 
         display_df = display_df.rename(
             columns={
-                t_col: "المبيعات الفعلية",
-                "smartaira_predicted_value": "المبيعات المتوقعة",
-                "smartaira_row_type": "نوع الصف",
-                "smartaira_top_drivers": "أهم العوامل المؤثرة",
-                "smartaira_model_mape_pct": "نسبة الخطأ في التوقع",
-                "smartaira_approval_status": "حالة الاعتماد",
+                t_col: t("table.actual_sales"),
+                "smartaira_predicted_value": t("table.predicted_sales"),
+                "smartaira_row_type": t("table.row_type"),
+                "smartaira_top_drivers": t("table.top_drivers"),
+                "smartaira_model_mape_pct": t("table.model_error"),
+                "smartaira_approval_status": t("table.approval_status"),
             }
         )
 
@@ -1941,12 +1989,12 @@ def main() -> None:
             hide_index=True,
             height=420,
             column_config={
-                "المبيعات الفعلية": st.column_config.NumberColumn(format="%,.2f"),
-                "المبيعات المتوقعة": st.column_config.NumberColumn(format="%,.2f"),
-                "نوع الصف": st.column_config.TextColumn(),
-                "أهم العوامل المؤثرة": st.column_config.TextColumn(width="large"),
-                "نسبة الخطأ في التوقع": st.column_config.TextColumn(),
-                "حالة الاعتماد": st.column_config.TextColumn(),
+                t("table.actual_sales"): st.column_config.NumberColumn(format="%,.2f"),
+                t("table.predicted_sales"): st.column_config.NumberColumn(format="%,.2f"),
+                t("table.row_type"): st.column_config.TextColumn(),
+                t("table.top_drivers"): st.column_config.TextColumn(width="large"),
+                t("table.model_error"): st.column_config.TextColumn(),
+                t("table.approval_status"): st.column_config.TextColumn(),
             },
         )
 
@@ -1956,9 +2004,7 @@ def main() -> None:
     st.markdown(
         f"""
         <div class="exec-callout">
-            ✅ <b>اكتمل التحليل بنجاح:</b> تم بناء التوقعات اعتماداً على أنماط المبيعات التاريخية لـ
-            <b>{res['n_series']} سلسلة/فرع</b> ومؤشر أداء تاريخي <b>{f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else "غير متاح بعد"}</b>.
-            راجع التنبيهات أولًا، ثم اعتمد الخطة أو حمّل ملف المبيعات المتوقع.
+            ✅ <b>{t("result.completed", series_count=res['n_series'], accuracy=f"{res['accuracy_pct']:.1f}%" if res.get('accuracy_pct') is not None else t("common.not_available_yet"))}</b>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1966,9 +2012,9 @@ def main() -> None:
 
     if st.session_state["approval_status"] != "APPROVED":
         approval_comment = st.text_area(
-            "تعليق المدير قبل الاعتماد (اختياري)",
+            t("governance.comment"),
             value=st.session_state.get("approval_comment", ""),
-            placeholder="مثال: تم الاعتماد مع زيادة المخزون في فرع مدينة نصر.",
+            placeholder=t("governance.comment_placeholder"),
         )
     else:
         approval_comment = st.session_state.get("approval_comment", "")
@@ -1977,32 +2023,31 @@ def main() -> None:
     with gov_c1:
         if st.session_state["approval_status"] == "APPROVED":
             st.success(
-                f"✅ تم اعتماد التوقعات بواسطة {st.session_state.get('approved_by', 'المدير')} "
-                f"({st.session_state['approved_at']})"
+                f"✅ {t('governance.approved_by', user=st.session_state.get('approved_by', t('common.unspecified')), timestamp=st.session_state['approved_at'])}"
             )
             if approval_comment:
-                st.caption(f"ملاحظة الاعتماد: {approval_comment}")
+                st.caption(t("governance.approval_note", comment=approval_comment))
         else:
-            st.caption("الاعتماد يعني أن هذه الخطة أصبحت المرجع الحالي لفريق المبيعات.")
-            if st.button("✅ اعتماد خطة التوقعات", width="stretch"):
+            st.caption(t("governance.approval_hint"))
+            if st.button(f"✅ {t('governance.approve')}", width="stretch"):
                 st.session_state["approval_status"] = "APPROVED"
                 st.session_state["approved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                st.session_state["approved_by"] = st.session_state.get("current_user", "المدير")
+                st.session_state["approved_by"] = st.session_state.get("current_user", t("common.unspecified"))
                 st.session_state["approval_comment"] = approval_comment
                 st.rerun()
     with gov_c2:
         csv_bytes = download_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            label="⬇️ تحميل ملف التوقعات كاملًا",
+            label=f"⬇️ {t('export.full_forecast')}",
             data=csv_bytes,
-            file_name=f"smartaira_forecast_{datetime.now().strftime('%Y%m%d')}.csv",
+            file_name=t("export.forecast_file", date=datetime.now().strftime("%Y%m%d")),
             mime="text/csv",
             type="primary",
             width="stretch",
         )
 
     st.markdown(
-        '<div class="brand-footer">منصة سمارتيرا &nbsp;•&nbsp; قرارات مبيعات أوضح &nbsp;•&nbsp; © 2026</div>',
+        f'<div class="brand-footer">{t("app.footer")}</div>',
         unsafe_allow_html=True,
     )
 

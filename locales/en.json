@@ -1,0 +1,248 @@
+{
+  "app": {
+    "page_title": "Smartaira Sales Forecasting Platform",
+    "build": "App version: {build_id}",
+    "footer": "Smartaira Platform • Clearer sales decisions • © 2026"
+  },
+  "language": {
+    "selector": "Language",
+    "results_reset": "Language changed. Run the forecast again to view results in the selected language."
+  },
+  "design": {
+    "selector": "Interface style",
+    "help": "You can change the visual style at any time without affecting your data or forecast.",
+    "neumorphism": "Soft Neumorphism",
+    "classic": "Classic Executive",
+    "warm": "Warm Paper"
+  },
+  "auth": {
+    "title": "Sign in to Smartaira",
+    "subtitle": "Use your credentials to enter the sales forecasting workspace.",
+    "username": "Username",
+    "password": "Password",
+    "sign_in": "Sign in",
+    "invalid": "The username or password is incorrect. Try smartaira in both fields.",
+    "configured_info": "Use the credentials provided by your platform administrator.",
+    "demo_info": "Demo credentials: smartaira / smartaira — for demonstration only"
+  },
+  "header": {
+    "badge": "Smartaira • Sales forecasting",
+    "title": "Forecast your sales in minutes",
+    "subtitle": "Upload a CSV file or start with sample data"
+  },
+  "workflow": {
+    "data": "1. Data",
+    "setup": "2. Setup",
+    "result": "3. Results"
+  },
+  "data": {
+    "heading": "1. Choose sales data",
+    "source": "Data source",
+    "sample_mode": "Try sample data",
+    "upload_mode": "Upload sales file",
+    "sample_button": "Use sample data ({rows} rows)",
+    "template_download": "Download CSV template",
+    "upload_label": "Upload a UTF-8 CSV file (up to 5 MB)",
+    "upload_error": "Unable to read CSV file: {error}",
+    "empty_status": "Data: no file selected yet",
+    "waiting_file": "1. Waiting for sales file",
+    "start_info": "Choose **Use sample data** or upload a **sales file** from this page to begin.",
+    "file_status": "File: {file_name} | Rows: {rows:,} | Period: {date_span}",
+    "preview": "Sales data preview — first 5 rows"
+  },
+  "settings": {
+    "heading": "2. Set up the forecast",
+    "date_column": "Date column",
+    "target_column": "Sales or value column",
+    "group_column": "Break down by branch or item (optional)",
+    "no_group": "No breakdown (company total)",
+    "horizon": "Future periods",
+    "horizon_option": "{days} days",
+    "improve": "Adjust forecast to your plan (optional)",
+    "scenario": "Choose a scenario",
+    "promo": "A promotion or campaign is planned in the upcoming period",
+    "discount": "Expected discount (%)",
+    "price_change": "Expected price change (%)",
+    "sales_target": "Sales target for the upcoming period (optional)",
+    "run": "Create sales forecast",
+    "review_columns": "Review the selected columns above, then select **Create sales forecast**."
+  },
+  "scenario": {
+    "baseline": "Base case",
+    "optimistic": "Optimistic growth (+10%)",
+    "cautious": "Cautious case (-10%)"
+  },
+  "privacy": {
+    "title": "Privacy and session management",
+    "body": "The demo runs in temporary memory only. Your files are not stored after the session ends.",
+    "clear_logout": "Clear data and sign out"
+  },
+  "validation": {
+    "empty_file": "Invalid file: the uploaded CSV is empty.",
+    "max_rows": "Invalid file: it contains {rows:,} rows. The upload limit is 10,000 rows.",
+    "same_columns": "Column error: choose different columns for the date and sales value.",
+    "invalid_group": "Column error: the grouping column must differ from the date and value columns.",
+    "invalid_date": "Invalid date in column '{date_col}' (for example, row {row}). Use day/month/year or year-month-day, and ensure dates are not blank.",
+    "invalid_value": "Value column '{target_col}' contains non-numeric text (for example, '{value}' in row {row}). Remove currency symbols and Excel errors before uploading.",
+    "insufficient_rows": "Not enough historical data: {rows} rows found. At least 30 rows are needed to detect a sales pattern.",
+    "constant_values": "Forecast cannot be created: all historical values in '{target_col}' are identical. Review the value column.",
+    "insufficient_group_rows": "Not enough data: every branch or group needs at least 15 historical rows.",
+    "verified": "Validated"
+  },
+  "granularity": {
+    "daily": "daily",
+    "weekly": "weekly",
+    "monthly": "monthly"
+  },
+  "common": {
+    "not_available": "Not available",
+    "not_available_yet": "Not available yet",
+    "unspecified": "Unspecified",
+    "series": "Series",
+    "company_total": "Company total",
+    "all_groups": "All branches and groups",
+    "historical": "Historical data",
+    "forecast": "Future forecast"
+  },
+  "spinner": {
+    "forecasting": "Analyzing data and calculating sales drivers..."
+  },
+  "status": {
+    "ready": "3. Forecast ready",
+    "validated": "2. Data checked ({granularity} • {series_count} series)",
+    "excluded": "{count} branch/group with no recent sales was excluded from the forecast: {groups}."
+  },
+  "result": {
+    "increase": "an increase in",
+    "decrease": "a decrease in",
+    "target_above": "The target is {gap:,.0f} above the forecast.",
+    "forecast_above": "The forecast is {gap:,.0f} above the target.",
+    "summary": "Forecast summary: we expect {trend} sales of {growth:.1f}% over the next {horizon} days. The expected range is {low:,.0f} to {high:,.0f}. Scenario used: {scenario}.{target_message}",
+    "completed": "Analysis complete: forecasts were created from historical sales patterns for {series_count} series/branches with a historical performance indicator of {accuracy}. Review the alerts first, then approve the plan or download the forecast file."
+  },
+  "kpi": {
+    "total_forecast": "Total forecast for {horizon} days",
+    "vs_previous": "{growth:+.1f}% vs. previous period",
+    "forecast_accuracy": "Forecast accuracy",
+    "error_rate": "Error rate: {error:.1f}%",
+    "not_enough_data": "Not enough test data",
+    "forecast_scope": "Forecast scope",
+    "active_series": "{count} active series",
+    "granularity_data": "{granularity} data",
+    "top_driver": "Top driver",
+    "largest_impact": "Largest forecast impact"
+  },
+  "tabs": {
+    "decision": "Decisions & alerts",
+    "charts": "Trends & drivers",
+    "branches": "Branch details"
+  },
+  "charts": {
+    "history_forecast": "Past sales versus future forecast",
+    "filter_series": "Filter chart by branch or group",
+    "history_legend": "Past sales",
+    "forecast_legend": "Smartaira forecast",
+    "date": "Date",
+    "sales_value": "Sales value",
+    "type": "Type",
+    "sales": "Sales",
+    "drivers": "What drives the forecast most?",
+    "usual_trend": "The forecast follows the usual sales trend.",
+    "average_impact": "Average sales impact",
+    "positive_impact": "Positive impact (+)",
+    "negative_impact": "Negative impact (-)",
+    "impact": "Sales impact",
+    "by_group": "Total forecast by branch or group",
+    "total_forecast_sales": "Total forecast sales",
+    "change": "Change rate",
+    "accuracy": "How close is the forecast?",
+    "accuracy_gauge_delta": "% versus an 85% target",
+    "accuracy_gauge_title": "Previous forecast accuracy (error rate: {error:.1f}%)",
+    "not_enough_accuracy": "There is not enough historical data to measure accuracy yet. The forecast remains available with a conservative range.",
+    "branch_details": "Demand details by branch",
+    "branch_details_caption": "An optional detailed view of the highest-demand days by branch and scenario.",
+    "scenario_range": "Scenario range",
+    "cautious": "Cautious (-6%)",
+    "smartaira_forecast": "Smartaira forecast",
+    "optimistic": "Optimistic (+6%)",
+    "forecast_date": "Forecast date",
+    "forecast_sales": "Forecast sales",
+    "hover_date": "Date:",
+    "hover_forecast": "Forecast:"
+  },
+  "decision": {
+    "title": "What should we do now?",
+    "caption": "Start with branches that need attention, then open details when needed.",
+    "alerts": "Alerts needing attention",
+    "alert_item": "{change_word} {change_pct:.1f}% • Forecast: {forecast:,.0f} • Action: {action}",
+    "accuracy_details": "Accuracy indicators in plain language",
+    "accuracy_close": "How close is the forecast?",
+    "total_error": "Error across total sales",
+    "bias": "Are we over- or under-forecasting?",
+    "baseline_comparison": "Compared with a simple method",
+    "accuracy_caption": "Lower is better. A positive sign means the forecast was above actual sales in the previous test.",
+    "group_summary": "Summary by branch or group",
+    "group_accuracy": "Tracking accuracy by branch or group",
+    "compare_previous": "Compare previous forecasts",
+    "download_history": "Download comparison history",
+    "details_export": "Details and export"
+  },
+  "table": {
+    "previous_sales": "Previous sales for {horizon} days",
+    "forecast_sales": "Forecast for the next {horizon} days",
+    "daily_forecast": "Average daily forecast",
+    "forecast_low": "Expected low",
+    "forecast_high": "Expected high",
+    "recommended_action": "Recommended action",
+    "peak_day": "Highest expected day",
+    "historical_error": "Historical error rate",
+    "total_error": "Error across total sales",
+    "average_error": "Average error",
+    "bias": "Bias",
+    "details_title": "Detailed forecast plan",
+    "display": "Show data",
+    "future_only": "Future forecast only",
+    "all_rows": "All historical and future data",
+    "filter_group": "Filter table by branch or group",
+    "actual_sales": "Actual sales",
+    "predicted_sales": "Forecast sales",
+    "row_type": "Row type",
+    "top_drivers": "Top sales drivers",
+    "model_error": "Forecast error rate",
+    "approval_status": "Approval status"
+  },
+  "actions": {
+    "increase_stock": "Increase monitoring and stock",
+    "review_activation": "Review the cause and plan activation",
+    "continue_monitoring": "Continue monitoring"
+  },
+  "drivers": {
+    "weekend": "Weekend (Friday and Saturday)",
+    "payday": "Month-end and payday period",
+    "day_of_week": "Day of week",
+    "month_seasonality": "Monthly seasonality",
+    "day_of_month": "Day of month",
+    "week_of_year": "Week of year",
+    "yearly_trend": "Yearly trend",
+    "base_trend": "Base trend",
+    "historical_trend": "Historical trend",
+    "actual_history": "Actual historical data"
+  },
+  "governance": {
+    "comment": "Manager comment before approval (optional)",
+    "comment_placeholder": "Example: Approved with higher stock for the Nasr City branch.",
+    "approved_by": "Forecast approved by {user} ({timestamp})",
+    "approval_note": "Approval note: {comment}",
+    "approval_hint": "Approval makes this plan the current reference for the sales team.",
+    "approve": "Approve forecast plan"
+  },
+  "approval": {
+    "pending": "Pending approval",
+    "approved": "Approved"
+  },
+  "export": {
+    "full_forecast": "Download full forecast file",
+    "history_file": "smartaira_forecast_history.csv",
+    "forecast_file": "smartaira_forecast_{date}.csv"
+  }
+}
